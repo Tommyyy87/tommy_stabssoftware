@@ -1,0 +1,23 @@
+{
+  "name": "stabs-app",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Browserbasierte Stabsunterstuetzungssoftware",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=24.0.0",
+    "npm": ">=11.0.0"
+  },
+  "scripts": {
+    "dev:web": "npm run dev -w @stabs/web",
+    "dev:api": "npm run start:dev -w @stabs/api",
+    "build": "npm run build -w @stabs/web && npm run build -w @stabs/api",
+    "lint": "npm run lint -w @stabs/web && npm run lint -w @stabs/api",
+    "test": "npm run test -w @stabs/api",
+    "typecheck": "npm run typecheck -w @stabs/web && npm run typecheck -w @stabs/api",
+    "verify:foundation": "npm run build -w @stabs/api && npm run verify:foundation -w @stabs/api"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@stabs/types": [
+        "./packages/types/src"
+      ],
+      "@stabs/ui": [
+        "./packages/ui/src"
+      ],
+      "@stabs/config/*": [
+        "./packages/config/*"
+      ]
+    }
+  }
+}
