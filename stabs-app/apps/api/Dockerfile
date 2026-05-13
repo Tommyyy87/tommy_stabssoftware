@@ -2,9 +2,8 @@ FROM node:24-bookworm-slim AS builder
 WORKDIR /app
 
 COPY package.json ./
-COPY package-lock.json* ./
 
-RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
+RUN npm install
 
 COPY tsconfig.json ./
 COPY src ./src
