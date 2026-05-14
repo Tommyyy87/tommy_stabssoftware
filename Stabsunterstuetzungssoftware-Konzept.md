@@ -927,6 +927,24 @@ Dieser Abschnitt ist fuer fortlaufende Pflege vorgesehen. Hier koennen waehrend 
 - Konsequenz: Die naechste technische Ausbaustufe kann direkt mit persistentem Auth-/Lagekern auf Basis von PostgreSQL und Prisma beginnen.
 - Status: umgesetzt
 
+### Eintrag 2026-05-14-02
+
+- Datum: 2026-05-14
+- Typ: Technikkommentar
+- Bezug: Firebase App Hosting Rollout
+- Kommentar: Der Frontend-Rollout auf Firebase App Hosting erforderte mehrere technische Nachschaerfungen: eigener Lockfile im Frontend-Root, Synchronisierung von Root- und Frontend-Lockfile, Umstellung auf Next.js 15.2.9, Aktivierung von `output: standalone` sowie die explizite Frontend-Abhaengigkeit `styled-jsx`.
+- Konsequenz: Fuer den Zielbetrieb auf Firebase App Hosting gilt das Frontend technisch nur dann als deployfaehig, wenn diese Punkte eingehalten und bei Aenderungen mitgepflegt werden.
+- Status: umgesetzt
+
+### Eintrag 2026-05-14-03
+
+- Datum: 2026-05-14
+- Typ: Technikkommentar
+- Bezug: Online-Betrieb / erster echter Frontend-Backend-Verbund
+- Kommentar: Das System ist als erster lauffaehiger Online-Stand produktionsnah verbunden. Das Frontend laeuft ueber Firebase App Hosting, das Backend ueber Cloud Run, und die Startseite zeigt den Backend-Status sowie die erste Lage live an.
+- Konsequenz: Die Grundsatzfrage des Betriebsmodells ist fuer die naechste Ausbaustufe entschieden. Der Schwerpunkt der Weiterentwicklung kann jetzt von Infrastruktur auf echte Fachoberflaechen wechseln.
+- Status: umgesetzt
+
 ## 32. Schlussbewertung
 
 Die angedachte Software ist fachlich sinnvoll und hat hohes praktisches Potenzial. Der Ansatz ist tragfaehig, wenn die Entwicklung konsequent an echten Stabsablaeufen orientiert bleibt und nicht in einer reinen Formularsammlung endet.

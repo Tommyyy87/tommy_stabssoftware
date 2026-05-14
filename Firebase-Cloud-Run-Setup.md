@@ -54,6 +54,19 @@ Im Repo ist bereits vorbereitet:
 - Demo-Zugang:
   - Benutzer `admin`
   - Passwort `demo`
+- Frontend zeigt live:
+  - Backend-Verbindung
+  - API-Status
+  - erste Lage aus `/api/incidents`
+
+### Letzter verifizierter Sichtstand
+
+Auf der Startseite muss im Bereich `Live-Verbindung` aktuell sichtbar sein:
+
+- Status `verbunden`
+- Dienst `stabs-api`
+- Stand `mvp-0.1-foundation`
+- Lage `Pilotlage Waldbrand`
 
 ## 4. Was du in Firebase und Google Cloud einrichten musst
 
@@ -258,3 +271,7 @@ Spaeter moeglich:
 ### Version 1.2 - 2026-05-14
 
 - Produktive URLs, Deploy-Root `firebase-web`, Cloud-Run-Service `stabs-api` und den aktuellen Live-Verbindungsstand dokumentiert.
+
+### Version 1.3 - 2026-05-14
+
+- Letzten Online-Sichtstand des Frontends und die sichtbare Live-Anzeige aus dem Backend nachgetragen.

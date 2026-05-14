@@ -1,7 +1,7 @@
 # Technologievorschlag Stabsunterstuetzungssoftware
 
-Version: 1.1  
-Stand: 2026-05-13  
+Version: 1.4  
+Stand: 2026-05-14  
 Status: Festgelegt  
 Bezug:
 
@@ -483,6 +483,25 @@ Zum Stand `2026-05-14` wird folgende Betriebsrichtung empfohlen:
 
 Fuer die eigentliche Anwendung ist die Variante `Frontend auf App Hosting, API auf Cloud Run` die sauberste Zielarchitektur. Rewrites ueber Firebase Hosting sind moeglich, aber eher eine Routing- und Domainentscheidung als die Kernarchitektur selbst.
 
+### Reale Erkenntnisse aus dem ersten App-Hosting-Rollout
+
+Aus dem praktischen Rollout am `2026-05-14` ergeben sich fuer dieses Projekt zusaetzlich diese verbindlichen Hinweise:
+
+- Firebase App Hosting verarbeitet das Frontend in diesem Monorepo nicht rein isoliert, sondern betrachtet zusaetzlich den Monorepo-Root.
+- Deshalb muessen `stabs-app/package-lock.json` und `stabs-app/apps/web/package-lock.json` mit dem Frontend-Package konsistent gehalten werden.
+- Fuer Firebase App Hosting wurde `Next.js 15.2.9` als kompatibler Frontend-Stand festgezogen.
+- Das Frontend muss `output: "standalone"` aktivieren, damit der von Firebase gesetzte Startbefehl `node .next/standalone/server.js` zur Laufzeit existiert.
+- Die Frontend-Runtime musste um `styled-jsx` ergaenzt werden, weil der Standalone-Container ohne diese explizite Abhaengigkeit nicht sauber startete.
+
+### Abweichung zur urspruenglichen Stack-Richtung
+
+Das Projektziel bleibt `Node.js 24 LTS` fuer die allgemeine Weiterentwicklung. Fuer Firebase App Hosting ist aber zu beachten:
+
+- Der Firebase-Build lief in der beobachteten Umgebung mit `Node.js 22.22.2`.
+- Die Root-`engines` wurden deshalb auf einen kompatiblen Mindeststand abgesenkt, damit der Plattformbuild nicht unnoetig blockiert.
+
+Dies ist eine betriebsbezogene Anpassung, keine grundlegende fachliche Architekturabweichung.
+
 ## 11. Quellen und Verifikationsstand
 
 Stand der Recherche: `2026-05-13`
@@ -528,3 +547,11 @@ Wenn spaeter bewusst vom hier empfohlenen Stack abgewichen wird, sollte die Abwe
 ### Version 1.2 - 2026-05-14
 
 - Zielbetrieb auf Firebase App Hosting fuer das Frontend und Cloud Run fuer das Backend festgelegt.
+
+### Version 1.3 - 2026-05-14
+
+- Reale Firebase-App-Hosting-Erkenntnisse zu Lockfiles, Next.js-Version, Standalone-Output und Runtime-Abhaengigkeiten nachgetragen.
+
+### Version 1.4 - 2026-05-14
+
+- Produktiven Online-Betrieb auf Firebase App Hosting plus Cloud Run erreicht und als aktueller Referenzstand bestaetigt.

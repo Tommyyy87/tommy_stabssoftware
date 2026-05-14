@@ -20,7 +20,7 @@ Der aktuelle Online-Stand fuer `MVP 0.1` ist:
 - Frontend live ueber Firebase App Hosting
 - Backend live ueber Cloud Run
 - Frontend kennt die echte API-URL
-- Health-Check und erste Incident-Liste koennen im Frontend sichtbar gemacht werden
+- Health-Check und erste Incident-Liste werden im Frontend sichtbar angezeigt
 
 ### Live-Adressen
 
@@ -42,9 +42,9 @@ Die Projektmetadaten zielen auf `Node.js 24 LTS`. Auf der aktuellen Maschine war
 
 ## Naechste Schritte
 
-1. Frontend um echte Login- und Lageansichten erweitern
-2. Auth-Status im Frontend speichern und nutzen
-3. Schreibende Aktionen fuer Lagen aus der Oberflaeche anbinden
+1. Frontend-Login mit Demo-Zugang sichtbar machen
+2. Benutzerstatus im Frontend anzeigen
+3. Lagen nicht nur lesen, sondern aus der Oberflaeche anlegen
 4. Datenbank statt In-Memory-Daten anbinden
 
 ## MVP-0.1-Stand
@@ -63,6 +63,7 @@ Reproduzierbarer Foundation-Check:
 
 - `npm run verify:foundation`
 - `curl https://stabs-api-1059988621010.europe-west4.run.app/api/health`
+- `curl https://stabs-api-1059988621010.europe-west4.run.app/api/incidents`
 - Frontend im Browser oeffnen und Live-Verbindungsbereich pruefen
 
 Geprueft werden:

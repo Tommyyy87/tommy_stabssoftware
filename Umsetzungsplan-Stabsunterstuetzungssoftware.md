@@ -625,3 +625,31 @@ Dieser Umsetzungsplan ist als laufend aktualisierte Projektroadmap gedacht.
 ### Version 1.1 - 2026-05-14
 
 - Zielbetrieb auf Firebase App Hosting fuer das Frontend und Cloud Run fuer das Backend festgelegt.
+
+### Entwicklungsstand 2026-05-14
+
+- Firebase App Hosting bis zum erfolgreichen Framework-Build vorangebracht.
+- Frontend fuer App Hosting technisch nachgeschaerft: eigener Frontend-Lockfile, Synchronisierung mit Root-Lockfile, Umstellung auf `Next.js 15.2.9`, `output: "standalone"` und explizite Runtime-Dependency `styled-jsx`.
+- Der isolierte Standalone-Start des Frontends wurde lokal erfolgreich mit `PORT=8080` verifiziert.
+
+### Entwicklungsstand 2026-05-14-02
+
+- Eigenstaendiger Frontend-Deploy-Ordner `firebase-web` eingefuehrt, damit Firebase App Hosting stabil deployen kann.
+- API als eigener Cloud-Run-Service `stabs-api` live geschaltet.
+- Frontend auf die echte API-URL verdrahtet.
+- Startseite erweitert, damit Health-Status und erste Lage live aus dem Backend sichtbar sind.
+
+### Aktueller Projektstand nach Live-Schaltung
+
+Erreicht:
+
+- Frontend live
+- Backend live
+- Frontend-Backend-Verbindung sichtbar verifiziert
+
+Noch offen bis zum naechsten funktionalen Meilenstein:
+
+- echtes Login im Frontend
+- Benutzer-/Sitzungsanzeige
+- Anlegen neuer Lagen aus der Oberflaeche
+- Persistenz mit Datenbank
