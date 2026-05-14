@@ -1,9 +1,15 @@
-import { Body, Controller, Get, Headers, Post } from "@nestjs/common";
+import { Body, Controller, Get, Headers, Param, Patch, Post } from "@nestjs/common";
 import { IncidentsService } from "./incidents.service";
 
 type CreateIncidentInput = {
   title: string;
   referenceNumber: string;
+};
+
+type UpdateIncidentInput = {
+  title?: string;
+  referenceNumber?: string;
+  status?: "draft" | "active" | "closed" | "archived";
 };
 
 @Controller("incidents")
@@ -21,5 +27,14 @@ export class IncidentsController {
     @Headers("authorization") authorizationHeader?: string
   ) {
     return this.incidentsService.create(body, authorizationHeader);
+  }
+
+  @Patch(":incidentId")
+  update(
+    @Param("incidentId") incidentId: string,
+    @Body() body: UpdateIncidentInput,
+    @Headers("authorization") authorizationHeader?: string
+  ) {
+    return this.incidentsService.update(incidentId, body, authorizationHeader);
   }
 }

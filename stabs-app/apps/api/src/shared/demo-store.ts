@@ -23,18 +23,26 @@ type AuthSession = {
   user: AppUser;
 };
 
-type IncidentSummary = {
+export type IncidentStatus = "draft" | "active" | "closed" | "archived";
+
+export type IncidentSummary = {
   id: string;
   title: string;
   referenceNumber: string;
-  status: "draft" | "active" | "closed" | "archived";
+  status: IncidentStatus;
   createdAt: string;
   createdBy: string;
 };
 
-type CreateIncidentInput = {
+export type CreateIncidentInput = {
   title: string;
   referenceNumber: string;
+};
+
+export type UpdateIncidentInput = {
+  title?: string;
+  referenceNumber?: string;
+  status?: IncidentStatus;
 };
 
 const now = new Date().toISOString();
@@ -118,13 +126,35 @@ export function listIncidents() {
 export function createIncident(input: CreateIncidentInput, createdBy: string) {
   const incident: IncidentSummary = {
     id: `incident-${String(incidents.length + 1).padStart(3, "0")}`,
-    title: input.title,
-    referenceNumber: input.referenceNumber,
+    title: input.title.trim(),
+    referenceNumber: input.referenceNumber.trim(),
     status: "draft",
     createdAt: new Date().toISOString(),
     createdBy
   };
 
   incidents.unshift(incident);
+  return incident;
+}
+
+export function updateIncident(incidentId: string, input: UpdateIncidentInput) {
+  const incident = incidents.find((entry) => entry.id === incidentId);
+
+  if (!incident) {
+    return null;
+  }
+
+  if (input.title !== undefined) {
+    incident.title = input.title.trim();
+  }
+
+  if (input.referenceNumber !== undefined) {
+    incident.referenceNumber = input.referenceNumber.trim();
+  }
+
+  if (input.status !== undefined) {
+    incident.status = input.status;
+  }
+
   return incident;
 }

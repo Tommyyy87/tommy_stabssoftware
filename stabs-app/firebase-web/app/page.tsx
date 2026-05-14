@@ -1,4 +1,5 @@
 import { loadApiSnapshot } from "../lib/api";
+import { OperationsConsole } from "./operations-console";
 
 export const dynamic = "force-dynamic";
 
@@ -17,14 +18,6 @@ const foundationModules = [
   "Rollen- und Berechtigungsgrundlage",
   "Erste Lage-API mit In-Memory-Startdaten"
 ];
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("de-DE", {
-    dateStyle: "short",
-    timeStyle: "short",
-    timeZone: "Europe/Berlin"
-  }).format(new Date(value));
-}
 
 export default async function HomePage() {
   const apiSnapshot = await loadApiSnapshot();
@@ -92,13 +85,13 @@ export default async function HomePage() {
             </div>
 
             <div className="status-card">
-              <h3>Erste Lage aus dem Backend</h3>
+              <h3>Live-Lagebestand aus dem Backend</h3>
               {apiSnapshot.incidents.length > 0 ? (
                 <ul className="milestones compact">
                   {apiSnapshot.incidents.map((incident) => (
                     <li key={incident.id}>
                       {incident.title} ({incident.referenceNumber}) - {incident.status} -{" "}
-                      {formatDate(incident.createdAt)}
+                      {incident.createdBy}
                     </li>
                   ))}
                 </ul>
@@ -115,6 +108,8 @@ export default async function HomePage() {
           </div>
         )}
       </section>
+
+      <OperationsConsole initialSnapshot={apiSnapshot} />
     </main>
   );
 }
