@@ -3,4 +3,4 @@ runConfig:
   maxInstances: 2
 env:
   - variable: NEXT_PUBLIC_API_BASE_URL
-    value: https://replace-with-cloud-run-url
+    value: https://stabs-api-1059988621010.europe-west4.run.app
