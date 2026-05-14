@@ -1,8 +1,8 @@
 # Firebase und Cloud Run Setup
 
-Version: 1.0  
+Version: 1.2  
 Stand: 2026-05-14  
-Status: Einrichtungsleitfaden  
+Status: Einrichtungs- und Betriebsleitfaden  
 Bezug:
 
 - [Technologievorschlag-Stabsunterstuetzungssoftware](./Technologievorschlag-Stabsunterstuetzungssoftware.md)
@@ -16,16 +16,18 @@ Fuer dieses Projekt gilt als Zielbetrieb:
 - `Frontend`: Firebase App Hosting
 - `Backend`: Google Cloud Run
 - `Repo-Root`: `D:\Dropbox\dev\Stabsarbeit\stabs-app`
-- `Web-App-Root`: `stabs-app/apps/web`
+- `Web-App-Source`: `stabs-app/apps/web`
+- `Web-App-Deploy-Root`: `stabs-app/firebase-web`
 - `API-Root`: `stabs-app/apps/api`
 
 ## 2. Betriebsprinzip
 
 Die Verbindung wird in der ersten sauberen Ausbaustufe so aufgebaut:
 
-1. Next.js-Frontend wird aus `apps/web` auf Firebase App Hosting deployed.
-2. NestJS-Backend wird als eigener Service aus `apps/api` auf Cloud Run deployed.
-3. Das Frontend spricht die API ueber eine eigene URL an, zum Beispiel:
+1. Die eigentliche Web-Entwicklung liegt unter `apps/web`.
+2. Firebase App Hosting deployed aus dem stabilen Deploy-Ordner `firebase-web`.
+3. NestJS-Backend wird als eigener Service aus `apps/api` auf Cloud Run deployed.
+4. Das Frontend spricht die API ueber eine eigene URL an, zum Beispiel:
    - Frontend: `https://<frontend-domain>`
    - API: `https://<api-service>-<hash>.<region>.run.app`
 
@@ -36,9 +38,22 @@ Spaeter kann optional eine gemeinsame oeffentliche Domain mit Routingregeln eing
 Im Repo ist bereits vorbereitet:
 
 - Monorepo unter `stabs-app`
-- Next.js-Frontend unter `apps/web`
+- Next.js-Frontend-Quellstand unter `apps/web`
+- Firebase-App-Hosting-Deploy-Ordner unter `firebase-web`
 - NestJS-Backend unter `apps/api`
 - Startdokumentation unter `stabs-app/README.md`
+
+### Produktiver Stand am 2026-05-14
+
+- Firebase App Hosting ist live auf:
+  - `https://stabsbackend--tommys-stabssoftware.europe-west4.hosted.app/`
+- Cloud Run API ist live auf:
+  - `https://stabs-api-1059988621010.europe-west4.run.app`
+- Health-Check:
+  - `https://stabs-api-1059988621010.europe-west4.run.app/api/health`
+- Demo-Zugang:
+  - Benutzer `admin`
+  - Passwort `demo`
 
 ## 4. Was du in Firebase und Google Cloud einrichten musst
 
@@ -80,7 +95,7 @@ In Firebase:
 4. Waehle das Repository aus, das `stabs-app` enthaelt.
 5. Setze den `Root directory` fuer das Frontend auf:
 
-`stabs-app/apps/web`
+`stabs-app/firebase-web`
 
 6. Waehle den Live-Branch, zum Beispiel:
 
@@ -116,11 +131,19 @@ Schon jetzt solltest du diese Trennung vorsehen:
 
 ### Fuer App Hosting
 
-Der relevante App-Ordner ist:
+Der relevante Deploy-Ordner ist:
 
-`stabs-app/apps/web`
+`stabs-app/firebase-web`
 
-Hier kann optional eine `apphosting.yaml` gepflegt werden.
+Hier wird die produktive `apphosting.yaml` gepflegt.
+
+Fuer dieses konkrete Repo gilt nach dem ersten erfolgreichen Build-Durchlauf zusaetzlich:
+
+- `stabs-app/firebase-web/package-lock.json` muss vorhanden sein
+- `firebase-web/next.config.ts` muss `output: "standalone"` enthalten
+- `firebase-web/package.json` muss `next` auf `15.2.9` fest pinnen
+- `firebase-web/package.json` muss `styled-jsx` explizit als Dependency enthalten
+- `firebase-web/apphosting.yaml` muss die echte Cloud-Run-URL als `NEXT_PUBLIC_API_BASE_URL` enthalten
 
 ### Fuer Cloud Run
 
@@ -130,11 +153,17 @@ Der relevante API-Ordner ist:
 
 Hier sollte die API produktiv build- und startfaehig sein.
 
+Zusatz fuer dieses Repo:
+
+- `apps/api/package-lock.json` ist vorhanden
+- `apps/api/Dockerfile` baut mit `npm ci`
+- `apps/api/scripts/deploy-cloud-run.ps1` enthaelt den lokale CLI-Deploy-Weg
+
 ## 6. Empfohlene Einfuehrungsreihenfolge
 
 1. Firebase-Projekt und Billing aktivieren
 2. GitHub-Repository bereitstellen
-3. Firebase App Hosting fuer `apps/web` verbinden
+3. Firebase App Hosting fuer `firebase-web` verbinden
 4. Cloud Run fuer `apps/api` deployen
 5. API-URL ermitteln
 6. `NEXT_PUBLIC_API_BASE_URL` im Frontend setzen
@@ -146,7 +175,7 @@ Hier sollte die API produktiv build- und startfaehig sein.
 ### Frontend
 
 - Plattform: Firebase App Hosting
-- Root: `stabs-app/apps/web`
+- Root: `stabs-app/firebase-web`
 - Buildquelle: GitHub-Repository
 
 ### Backend
@@ -161,7 +190,51 @@ Wenn alles verbunden ist, pruefst du:
 1. Frontend-URL oeffnet sich
 2. API-URL antwortet mit `/api/health`
 3. Frontend kennt die API-Basis-URL
-4. Browser-Konsole zeigt keine CORS- oder Netzwerkfehler
+4. Frontend zeigt im Live-Bereich den Backend-Status und die erste Lage
+5. Browser-Konsole zeigt keine CORS- oder Netzwerkfehler
+
+## 8a. Erkenntnisse aus dem ersten Firebase-Rollout
+
+Beim ersten realen App-Hosting-Rollout sind bereits mehrere typische Stolperstellen dieses Monorepo-Setups sichtbar geworden:
+
+### Stolperstelle 1: Missing Lock File
+
+Firebase App Hosting erwartet im konfigurierten Frontend-Root einen Lockfile.
+
+Fuer dieses Repo bedeutet das:
+
+- `stabs-app/apps/web/package-lock.json` ist Pflicht
+
+### Stolperstelle 2: Root- und Frontend-Lockfile muessen zusammenpassen
+
+Da Firebase das Projekt im Monorepo-Kontext verarbeitet, reicht ein einzelner Frontend-Lockfile nicht aus. Der Root-Lockfile muss ebenfalls mit dem Frontend-Workspace synchron sein.
+
+### Stolperstelle 3: Next.js-Kompatibilitaet
+
+Der anfängliche Stand mit `Next.js 16` war fuer Firebase App Hosting in diesem Setup nicht belastbar. Der Frontend-Stand wurde deshalb auf `Next.js 15.2.9` umgestellt.
+
+### Stolperstelle 4: Standalone-Output ist erforderlich
+
+Firebase startet das Next-Frontend mit einem Standalone-Server. Deshalb muss `output: "standalone"` aktiv sein.
+
+### Stolperstelle 5: Fehlende Runtime-Abhaengigkeit im Standalone-Bundle
+
+Der isolierte Standalone-Start scheiterte zunaechst an:
+
+- `Cannot find module 'styled-jsx/package.json'`
+
+Die Frontend-Dependency `styled-jsx` wurde daraufhin explizit hinzugefuegt.
+
+### Fazit
+
+Fuer dieses Repo gilt damit praktisch:
+
+1. App Hosting nicht direkt aus `apps/web` deployen
+2. Stattdessen den entkoppelten Deploy-Ordner `firebase-web` verwenden
+3. `Next.js 15.2.9` beibehalten, bis spaeter ein bewusst getesteter Plattformwechsel erfolgt
+4. `output: "standalone"` nicht entfernen
+5. `styled-jsx` nicht aus den Frontend-Dependencies entfernen
+6. API als eigenen Cloud-Run-Service getrennt betreiben
 
 ## 9. Spaetere Ausbaustufe
 
@@ -177,3 +250,11 @@ Spaeter moeglich:
 ### Version 1.0 - 2026-05-14
 
 - Erstfassung des Firebase-/Cloud-Run-Einrichtungsleitfadens erstellt.
+
+### Version 1.1 - 2026-05-14
+
+- Reale Rollout-Erkenntnisse zu Lockfiles, Next.js-Kompatibilitaet, Standalone-Output und `styled-jsx` dokumentiert.
+
+### Version 1.2 - 2026-05-14
+
+- Produktive URLs, Deploy-Root `firebase-web`, Cloud-Run-Service `stabs-api` und den aktuellen Live-Verbindungsstand dokumentiert.

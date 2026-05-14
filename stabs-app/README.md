@@ -1,36 +1,51 @@
 # Stabs-App
 
-Monorepo-Grundgeruest fuer die browserbasierte Stabsunterstuetzungssoftware.
+Monorepo fuer die browserbasierte Stabsunterstuetzungssoftware mit laufendem Frontend auf Firebase App Hosting und laufender API auf Cloud Run.
 
 ## Struktur
 
 - `apps/web`: Next.js-Frontend
 - `apps/api`: NestJS-Backend
+- `firebase-web`: eigenstaendiger Firebase-App-Hosting-Deploy-Ordner
 - `packages/types`: gemeinsame Typdefinitionen
 - `packages/ui`: gemeinsame UI-Bausteine
 - `packages/config`: gemeinsame Konfigurationen
 - `infra/docker`: Infrastrukturgrundlagen
 - `docs`: technische Projektdokumentation
 
-## Zielstand dieser Initialfassung
+## Aktueller Betriebsstand
 
-Diese Fassung schafft das Fundament fuer `MVP 0.1`:
+Der aktuelle Online-Stand fuer `MVP 0.1` ist:
 
-- Monorepo-Struktur
-- getrennte Web- und API-App
-- gemeinsame TypeScript-Basis
-- vorbereitete Infrastrukturordner
+- Frontend live ueber Firebase App Hosting
+- Backend live ueber Cloud Run
+- Frontend kennt die echte API-URL
+- Health-Check und erste Incident-Liste koennen im Frontend sichtbar gemacht werden
+
+### Live-Adressen
+
+- Frontend: `https://stabsbackend--tommys-stabssoftware.europe-west4.hosted.app/`
+- Backend Health: `https://stabs-api-1059988621010.europe-west4.run.app/api/health`
+- Backend Basis: `https://stabs-api-1059988621010.europe-west4.run.app`
 
 ## Lokaler Hinweis
 
 Die Projektmetadaten zielen auf `Node.js 24 LTS`. Auf der aktuellen Maschine war beim Anlegen des Geruests `Node.js 20.17.0` vorhanden. Vor der ersten echten Installation und Laufzeitpruefung sollte deshalb auf `Node.js 24 LTS` gewechselt werden.
 
+## Zugriffe
+
+- Demo-Benutzer: `admin`
+- Demo-Passwort: `demo`
+- Firebase-Projekt: `tommys-stabssoftware`
+- Cloud-Run-Service API: `stabs-api`
+- App-Hosting-Backend: `stabsbackend`
+
 ## Naechste Schritte
 
-1. Abhaengigkeiten installieren
-2. Web- und API-Basis lauffaehig machen
-3. Auth-, Rollen- und Lagekern implementieren
-4. Datenbank und Prisma anbinden
+1. Frontend um echte Login- und Lageansichten erweitern
+2. Auth-Status im Frontend speichern und nutzen
+3. Schreibende Aktionen fuer Lagen aus der Oberflaeche anbinden
+4. Datenbank statt In-Memory-Daten anbinden
 
 ## MVP-0.1-Stand
 
@@ -42,16 +57,13 @@ Aktuell enthalten:
 - erste Rollen-/Berechtigungsgrundlage
 - erste Lageverwaltung als In-Memory-Startpunkt
 
-### Demo-Zugang
-
-- Benutzer: `admin`
-- Passwort: `demo`
-
 ## Verifikation
 
 Reproduzierbarer Foundation-Check:
 
 - `npm run verify:foundation`
+- `curl https://stabs-api-1059988621010.europe-west4.run.app/api/health`
+- Frontend im Browser oeffnen und Live-Verbindungsbereich pruefen
 
 Geprueft werden:
 

@@ -1,3 +1,7 @@
+import { loadApiSnapshot } from "../lib/api";
+
+export const dynamic = "force-dynamic";
+
 const milestones = [
   "Login und Rollen",
   "Lageverwaltung",
@@ -14,7 +18,17 @@ const foundationModules = [
   "Erste Lage-API mit In-Memory-Startdaten"
 ];
 
-export default function HomePage() {
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("de-DE", {
+    dateStyle: "short",
+    timeStyle: "short",
+    timeZone: "Europe/Berlin"
+  }).format(new Date(value));
+}
+
+export default async function HomePage() {
+  const apiSnapshot = await loadApiSnapshot();
+
   return (
     <main className="shell">
       <section className="hero">
@@ -49,8 +63,57 @@ export default function HomePage() {
           <h3>Demo-Zugriff API</h3>
           <p>`POST /api/auth/login` mit `admin / demo`</p>
           <p>`GET /api/incidents` fuer die erste Lageuebersicht</p>
-          <p>API-Zielport: `3001`</p>
+          <p>API-Ziel: `{apiSnapshot.baseUrl || "nicht gesetzt"}`</p>
         </div>
+      </section>
+
+      <section className="panel">
+        <div className="status-header">
+          <div>
+            <p className="eyebrow">Live-Verbindung</p>
+            <h2>Backend-Status</h2>
+          </div>
+          <span
+            className={
+              apiSnapshot.backendReachable ? "status-badge online" : "status-badge offline"
+            }
+          >
+            {apiSnapshot.backendReachable ? "verbunden" : "nicht verbunden"}
+          </span>
+        </div>
+
+        {apiSnapshot.backendReachable && apiSnapshot.health ? (
+          <div className="status-grid">
+            <div className="status-card">
+              <h3>API-Gesundheit</h3>
+              <p>Status: `{apiSnapshot.health.status}`</p>
+              <p>Dienst: `{apiSnapshot.health.service}`</p>
+              <p>Stand: `{apiSnapshot.health.stage}`</p>
+            </div>
+
+            <div className="status-card">
+              <h3>Erste Lage aus dem Backend</h3>
+              {apiSnapshot.incidents.length > 0 ? (
+                <ul className="milestones compact">
+                  {apiSnapshot.incidents.map((incident) => (
+                    <li key={incident.id}>
+                      {incident.title} ({incident.referenceNumber}) - {incident.status} -{" "}
+                      {formatDate(incident.createdAt)}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>Aktuell wurden noch keine Lagen zur Anzeige geliefert.</p>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="status-card error-card">
+            <h3>Backend aktuell nicht lesbar</h3>
+            <p>{apiSnapshot.error ?? "Kein Fehlertext verfuegbar."}</p>
+            <p>Pruefziel: `{apiSnapshot.baseUrl || "nicht konfiguriert"}`</p>
+          </div>
+        )}
       </section>
     </main>
   );
