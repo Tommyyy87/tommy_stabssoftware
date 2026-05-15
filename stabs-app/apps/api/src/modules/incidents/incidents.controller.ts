@@ -1,16 +1,6 @@
 import { Body, Controller, Get, Headers, Param, Patch, Post } from "@nestjs/common";
 import { IncidentsService } from "./incidents.service";
-
-type CreateIncidentInput = {
-  title: string;
-  referenceNumber: string;
-};
-
-type UpdateIncidentInput = {
-  title?: string;
-  referenceNumber?: string;
-  status?: "draft" | "active" | "closed" | "archived";
-};
+import { CreateIncidentInput, UpdateIncidentInput } from "./incidents.store";
 
 @Controller("incidents")
 export class IncidentsController {

@@ -6,6 +6,8 @@
     "start:dev": "tsx watch src/main.ts",
     "build": "tsc -p tsconfig.json",
     "lint": "tsc --noEmit -p tsconfig.json",
+    "prisma:generate": "prisma generate",
+    "db:migrate:deploy": "prisma migrate deploy",
     "test": "node --test dist",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "verify:foundation": "node scripts/verify-foundation.cjs"
@@ -14,11 +16,13 @@
     "@nestjs/common": "^11.1.8",
     "@nestjs/core": "^11.1.8",
     "@nestjs/platform-express": "^11.1.8",
+    "@prisma/client": "^6.19.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2"
   },
   "devDependencies": {
     "@types/node": "^24.9.1",
+    "prisma": "^6.19.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }

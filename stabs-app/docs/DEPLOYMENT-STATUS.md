@@ -1,19 +1,20 @@
 # Deployment-Status
 
-Version: `1.1`  
-Stand: `2026-05-14`  
+Version: `1.2`  
+Stand: `2026-05-15`  
 Status: `Live-Betrieb / Referenz fuer Weiterentwicklung`
 
 ## 1. Kurzfassung
 
-Zum Stand `2026-05-14` ist das Grundsystem online und technisch verbunden:
+Zum Stand `2026-05-15` ist der erste echte Online-Kern live und funktional erweitert:
 
 - Frontend live ueber Firebase App Hosting
 - Backend live ueber Google Cloud Run
 - Frontend zeigt echten Backend-Status
-- Frontend zeigt die erste Lage aus der API
+- Frontend erlaubt Login, Benutzerstatus und Lagearbeit
+- Incident-Daten liegen persistent in PostgreSQL ueber Cloud SQL
 
-Damit ist das Projekt nicht mehr nur ein lokales Grundgeruest, sondern ein online erreichbarer erster Systemkern.
+Damit ist das Projekt nicht mehr nur ein online sichtbarer Demo-Kern, sondern hat jetzt auch eine erste dauerhafte Datenbasis fuer die Lageverwaltung.
 
 ## 2. Live-Systeme
 
@@ -27,7 +28,9 @@ Damit ist das Projekt nicht mehr nur ein lokales Grundgeruest, sondern ein onlin
 - Firebase-Projekt: `tommys-stabssoftware`
 - Firebase App-Hosting-Backend: `stabsbackend`
 - Cloud-Run-Service: `stabs-api`
-- Region Frontend/Backend: `europe-west4`
+- Cloud-SQL-Instanz: `stabs-db`
+- Cloud-SQL-Datenbank: `stabsapp`
+- Region Frontend/Backend/DB: `europe-west4`
 - GitHub-Repository: `https://github.com/Tommyyy87/tommy_stabssoftware`
 - Live-Branch: `main`
 
@@ -37,6 +40,7 @@ Damit ist das Projekt nicht mehr nur ein lokales Grundgeruest, sondern ein onlin
 - Frontend-Quellstand: `stabs-app/apps/web`
 - Frontend-Deploy-Ordner: `stabs-app/firebase-web`
 - Backend: `stabs-app/apps/api`
+- Prisma-Schema und Migrationen: `stabs-app/apps/api/prisma`
 - Betriebsdoku: `stabs-app/docs`
 
 ## 5. Bekannte Zugriffe
@@ -54,17 +58,19 @@ Hinweis:
 - Die Frontend-URL oeffnet die Startseite.
 - Im Bereich `Live-Verbindung` steht der Status auf `verbunden`.
 - Im Bereich `API-Gesundheit` wird `ok` angezeigt.
-- Im Bereich `Erste Lage aus dem Backend` erscheint mindestens:
-  - `Pilotlage Waldbrand`
-  - `WB-2026-001`
+- In der `Arbeitsansicht` ist Login mit `admin / demo` moeglich.
+- Nach erfolgreichem Login lassen sich neue Lagen anlegen.
+- Neu angelegte Lagen erscheinen in der Liste aus dem Backend.
 
 ## 7. Relevante Deploy-Dateien
 
 - Frontend-Deploy-Konfiguration: `firebase-web/apphosting.yaml`
-- Frontend-Startseite mit Live-Anzeige: `firebase-web/app/page.tsx`
+- Frontend-Startseite: `firebase-web/app/page.tsx`
+- Frontend-Arbeitsansicht: `firebase-web/app/operations-console.tsx`
 - Frontend-API-Helfer: `firebase-web/lib/api.ts`
 - Backend-Containerbuild: `apps/api/Dockerfile`
 - Lokaler Cloud-Run-Deploy-Weg: `apps/api/scripts/deploy-cloud-run.ps1`
+- Prisma-Schema: `apps/api/prisma/schema.prisma`
 
 ## 8. Verifizierter Ist-Stand
 
@@ -72,79 +78,55 @@ Zum letzten verifizierten Stand gilt:
 
 - `GET /api/health` liefert:
   - `{"service":"stabs-api","status":"ok","stage":"mvp-0.1-foundation"}`
-- `GET /api/incidents` liefert mindestens eine Lage:
+- `GET /api/incidents` liefert mindestens:
   - `incident-001`
   - `Pilotlage Waldbrand`
   - `WB-2026-001`
-- Das Frontend rendert diese Daten sichtbar in der Oberflaeche.
+- `POST /api/incidents` legt neue Lagen persistent an.
+- Ein verifizierter Persistenztest wurde mit einer neuen Lage ueber den Live-Endpunkt durchgefuehrt.
+- Cloud Run Revision `stabs-api-00003-t4b` laeuft mit angebundener Cloud-SQL-Instanz.
 
 ## 9. Zeitlinie
 
-### 2026-05-14 ca. 00:45 bis 01:09
-
-- Mehrere Firebase-App-Hosting-Rollouts schlagen fehl.
-- Hauptfehler:
-  - `Cannot find module 'styled-jsx/package.json'`
-- Folge:
-  - App Hosting konnte den Standalone-Next-Server nicht starten.
-
-### 2026-05-14 ca. 20:04
+### 2026-05-14
 
 - Root-Lockfile-Fix fuer `styled-jsx` auf `main` gepusht.
-- Commit:
-  - `b689807`
-
-### 2026-05-14 ca. 20:09 bis 20:10
-
 - Eigenstaendiger Frontend-Deploy-Ordner `firebase-web` eingefuehrt.
-- Commit:
-  - `f0632c3`
-
-### 2026-05-14 ca. 20:28 bis 20:29 UTC
-
-- API-Image erfolgreich in Cloud Build gebaut.
-- Build-ID:
-  - `870ada04-2393-42af-965c-8a740382961d`
-
-### 2026-05-14 ca. 20:32 UTC
-
 - Cloud-Run-Service `stabs-api` erfolgreich erstellt.
-- Erste Lage aus In-Memory-Daten online verfuegbar.
-
-### 2026-05-14 danach
-
 - Frontend auf echte API-URL konfiguriert.
-- Commit:
-  - `8e0d03b`
-
-### 2026-05-14 spaeter
-
 - Live-Backend-Status und erste Lage im Frontend sichtbar gemacht.
-- Commit:
-  - `0ac2a0f`
+
+### 2026-05-15
+
+- Incident-Store von direktem In-Memory-Zugriff auf austauschbaren Store umgestellt.
+- Prisma mit PostgreSQL-Schema und Migrationen eingebaut.
+- Cloud-SQL-Instanz `stabs-db` in `europe-west4` angelegt.
+- Datenbank `stabsapp` angelegt.
+- Secret `stabs-api-database-url` erstellt und an Cloud Run gebunden.
+- Cloud-Run-Service `stabs-api` auf Revision `stabs-api-00003-t4b` mit Cloud-SQL-Anbindung ausgerollt.
+- Persistenzpfad live verifiziert durch Login, Incident-Anlage und erneutes Lesen ueber `/api/incidents`.
 
 ## 10. Letzte relevante Commits
 
+- `d18c479` `Add interactive incident workspace`
 - `0ac2a0f` `Show live backend status in frontend`
 - `8e0d03b` `Configure frontend API base URL`
 - `cae9d19` `Prepare API for Cloud Run deployment`
-- `f0632c3` `Add standalone Firebase App Hosting web app`
-- `b689807` `Fix App Hosting lockfile for styled-jsx`
 
 ## 11. Bekannte technische Leitplanken
 
 - Firebase App Hosting soll fuer dieses Projekt aus `firebase-web` deployen, nicht direkt aus `apps/web`.
 - Das Frontend fuer Firebase App Hosting bleibt auf `Next.js 15.2.9`.
-- `output: "standalone"` darf nicht entfernt werden.
+- `output: "standalone"` darf im Frontend nicht entfernt werden.
 - `styled-jsx` muss in den Frontend-Dependencies erhalten bleiben.
-- Die Startseite ist bewusst dynamisch, damit Live-Daten nicht statisch eingefroren werden.
+- Cloud Run bezieht `DATABASE_URL` aus Secret Manager.
+- Cloud Run nutzt fuer PostgreSQL die angebundene Cloud-SQL-Instanz `tommys-stabssoftware:europe-west4:stabs-db`.
 
-## 12. Nächster sinnvoller Ausbau
+## 12. Naechster sinnvoller Ausbau
 
-Die naechste Entwicklungsstufe sollte nicht mehr die Infrastruktur, sondern die erste echte Nutzfunktion priorisieren:
+Die naechste Entwicklungsstufe sollte jetzt auf dem persistenten Incident-Kern aufsetzen:
 
-1. Frontend-Loginformular
-2. Session-/Benutzeranzeige im Frontend
-3. Incident-Liste als echte Arbeitsansicht
-4. Anlegen neuer Incidents aus dem Frontend
-5. Danach Persistenz statt In-Memory-Daten
+1. Bearbeiten von Lagen gegen den persistenten Store gezielt nachverifizieren
+2. Demo-Benutzer und Rollen aus dem In-Memory-Zustand herausloesen
+3. Audit-/Historienlogik fuer Lageaenderungen aufbauen
+4. Danach weitere Fachmodule auf denselben persistenten Kern setzen

@@ -1,0 +1,26 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum IncidentStatus {
+  draft
+  active
+  closed
+  archived
+}
+
+model Incident {
+  id              String         @id
+  title           String
+  referenceNumber String         @unique
+  status          IncidentStatus @default(draft)
+  createdAt       DateTime       @default(now())
+  createdByUserId String
+
+  @@index([createdAt(sort: Desc)])
+}

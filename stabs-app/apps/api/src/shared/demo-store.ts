@@ -23,29 +23,38 @@ type AuthSession = {
   user: AppUser;
 };
 
-export type IncidentStatus = "draft" | "active" | "closed" | "archived";
-
-export type IncidentSummary = {
+type StoredIncident = {
   id: string;
   title: string;
   referenceNumber: string;
-  status: IncidentStatus;
+  status: "draft" | "active" | "closed" | "archived";
   createdAt: string;
   createdBy: string;
 };
 
-export type CreateIncidentInput = {
+type CreateIncidentInput = {
   title: string;
   referenceNumber: string;
 };
 
-export type UpdateIncidentInput = {
+type UpdateIncidentInput = {
   title?: string;
   referenceNumber?: string;
-  status?: IncidentStatus;
+  status?: "draft" | "active" | "closed" | "archived";
 };
 
 const now = new Date().toISOString();
+
+const seededIncidents: StoredIncident[] = [
+  {
+    id: "incident-001",
+    title: "Pilotlage Waldbrand",
+    referenceNumber: "WB-2026-001",
+    status: "active",
+    createdAt: now,
+    createdBy: "user-admin"
+  }
+];
 
 const seededUsers: AppUser[] = [
   {
@@ -78,19 +87,18 @@ const rolePermissions = new Map<AppRole, string[]>([
 
 const sessions = new Map<string, AuthSession>();
 
-const incidents: IncidentSummary[] = [
-  {
-    id: "incident-001",
-    title: "Pilotlage Waldbrand",
-    referenceNumber: "WB-2026-001",
-    status: "active",
-    createdAt: now,
-    createdBy: "user-admin"
-  }
-];
+const incidents: StoredIncident[] = seededIncidents.map((incident) => ({ ...incident }));
 
 export function getSeededUsers() {
   return seededUsers;
+}
+
+export function resolveUserDisplayName(userId: string) {
+  return seededUsers.find((user) => user.id === userId)?.displayName ?? userId;
+}
+
+export function getSeededIncidents() {
+  return seededIncidents.map((incident) => ({ ...incident }));
 }
 
 export function createSession(user: AppUser) {
@@ -124,7 +132,7 @@ export function listIncidents() {
 }
 
 export function createIncident(input: CreateIncidentInput, createdBy: string) {
-  const incident: IncidentSummary = {
+  const incident: StoredIncident = {
     id: `incident-${String(incidents.length + 1).padStart(3, "0")}`,
     title: input.title.trim(),
     referenceNumber: input.referenceNumber.trim(),

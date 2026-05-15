@@ -1,17 +1,17 @@
 import {
+  Inject,
   BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException
 } from "@nestjs/common";
 import {
-  createIncident,
   CreateIncidentInput,
+  INCIDENT_STORE,
   IncidentStatus,
-  listIncidents,
-  updateIncident,
+  IncidentStore,
   UpdateIncidentInput
-} from "../../shared/demo-store";
+} from "./incidents.store";
 import { AuthService } from "../auth/auth.service";
 
 const validIncidentStatuses = new Set<IncidentStatus>([
@@ -23,20 +23,23 @@ const validIncidentStatuses = new Set<IncidentStatus>([
 
 @Injectable()
 export class IncidentsService {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    @Inject(INCIDENT_STORE) private readonly incidentStore: IncidentStore
+  ) {}
 
-  list() {
-    return listIncidents();
+  async list() {
+    return this.incidentStore.list();
   }
 
-  create(input: CreateIncidentInput, authorizationHeader: string | undefined) {
+  async create(input: CreateIncidentInput, authorizationHeader: string | undefined) {
     const session = this.authService.getPermissionsForCurrentUser(authorizationHeader);
 
     if (!session.permissions.includes("incidents.create")) {
       throw new ForbiddenException("Keine Berechtigung zum Anlegen von Lagen.");
     }
 
-    return createIncident(
+    return this.incidentStore.create(
       {
         title: this.requireText(input.title, "Titel"),
         referenceNumber: this.requireText(input.referenceNumber, "Aktenzeichen")
@@ -45,7 +48,7 @@ export class IncidentsService {
     );
   }
 
-  update(
+  async update(
     incidentId: string,
     input: UpdateIncidentInput,
     authorizationHeader: string | undefined
@@ -81,7 +84,7 @@ export class IncidentsService {
       throw new BadRequestException("Keine gueltigen Aenderungen uebergeben.");
     }
 
-    const updatedIncident = updateIncident(incidentId, normalizedInput);
+    const updatedIncident = await this.incidentStore.update(incidentId, normalizedInput);
 
     if (!updatedIncident) {
       throw new NotFoundException("Lage nicht gefunden.");

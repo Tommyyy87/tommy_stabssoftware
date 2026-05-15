@@ -7,9 +7,11 @@ COPY package-lock.json ./
 RUN npm ci
 
 COPY tsconfig.json ./
+COPY prisma ./prisma
 COPY src ./src
 COPY scripts ./scripts
 
+RUN npm run prisma:generate
 RUN npm run build
 
 FROM node:24-bookworm-slim AS runner
@@ -20,8 +22,9 @@ ENV PORT=8080
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/package-lock.json ./package-lock.json
 COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/dist ./dist
 
 EXPOSE 8080
 
-CMD ["node", "dist/main.js"]
+CMD ["sh", "-c", "npm run db:migrate:deploy && node dist/main.js"]

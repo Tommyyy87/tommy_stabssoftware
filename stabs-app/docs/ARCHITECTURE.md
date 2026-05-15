@@ -1,6 +1,6 @@
 # Architektur
 
-Stand: `2026-05-14`
+Stand: `2026-05-15`
 
 ## 1. Aktuelle Zielarchitektur im Betrieb
 
@@ -19,8 +19,11 @@ Das System ist aktuell in drei klar getrennte technische Bereiche aufgeteilt:
   - Firebase App Hosting
 - Backend:
   - Google Cloud Run
+- Datenhaltung:
+  - PostgreSQL auf Cloud SQL
 - Verbindung:
   - Frontend ruft das Backend ueber `NEXT_PUBLIC_API_BASE_URL` auf
+  - Backend liest `DATABASE_URL` aus Secret Manager
 
 ## 3. Warum `firebase-web` zusaetzlich existiert
 
@@ -43,21 +46,23 @@ Aktuell technisch umgesetzt:
 - `GET /api/auth/me`
 - `GET /api/incidents`
 - `POST /api/incidents`
+- `PATCH /api/incidents/:incidentId`
 - Frontend-Statusanzeige fuer API-Health
-- Frontend-Anzeige der ersten Lage aus dem Backend
+- Frontend-Arbeitsansicht mit Login, Incident-Liste und Incident-Anlage
 
 ## 5. Aktuelle Datenhaltung
 
-Hinweis:
+Aktueller Stand:
 
-- Auth und Lageverwaltung laufen aktuell bewusst als In-Memory-Startpunkt.
-- Es gibt noch keine produktive Datenbankanbindung.
-- Ein Neustart des Backends setzt den aktuellen Demo-Datenstand zurueck.
+- Demo-Authentifizierung und Session-Aufloesung laufen weiterhin als bewusster Startpunkt im Arbeitsspeicher.
+- Incident-Daten werden nun persistent in `PostgreSQL` auf `Cloud SQL` gehalten.
+- Prisma ist als Datenzugriffsschicht im Backend eingebaut.
+- Cloud Run bindet die Cloud-SQL-Instanz direkt an und injiziert die Verbindungszeichenkette aus Secret Manager.
 
-## 6. Nächste Architektur-Stufe
+## 6. Naechste Architektur-Stufe
 
 Die naechste sinnvolle Weiterentwicklung ist:
 
-1. Session-/Login-Fluss im Frontend
-2. Persistente Datenhaltung mit PostgreSQL und Prisma
-3. Danach schrittweise Ausbau der Fachansichten statt nur Status-/Demo-Anzeige
+1. Demo-Authentifizierung und Rollenmodell aus dem In-Memory-Zustand herausloesen
+2. Audit-/Historienmodell fuer Incident-Aenderungen aufbauen
+3. Danach weitere Fachansichten auf denselben persistenten Kern setzen
