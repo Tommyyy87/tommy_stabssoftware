@@ -1,7 +1,7 @@
 # Firebase und Cloud Run Setup
 
-Version: 1.2  
-Stand: 2026-05-14  
+Version: 1.3  
+Stand: 2026-05-15  
 Status: Einrichtungs- und Betriebsleitfaden  
 Bezug:
 
@@ -43,12 +43,15 @@ Im Repo ist bereits vorbereitet:
 - NestJS-Backend unter `apps/api`
 - Startdokumentation unter `stabs-app/README.md`
 
-### Produktiver Stand am 2026-05-14
+### Produktiver Stand am 2026-05-15
 
 - Firebase App Hosting ist live auf:
   - `https://stabsbackend--tommys-stabssoftware.europe-west4.hosted.app/`
 - Cloud Run API ist live auf:
   - `https://stabs-api-1059988621010.europe-west4.run.app`
+- Cloud SQL PostgreSQL ist live als:
+  - Instanz `stabs-db`
+  - Datenbank `stabsapp`
 - Health-Check:
   - `https://stabs-api-1059988621010.europe-west4.run.app/api/health`
 - Demo-Zugang:
@@ -57,7 +60,9 @@ Im Repo ist bereits vorbereitet:
 - Frontend zeigt live:
   - Backend-Verbindung
   - API-Status
-  - erste Lage aus `/api/incidents`
+  - Incident-Liste aus `/api/incidents`
+  - Login, Benutzerstatus und Lageanlage
+- Backend speichert Incident-Daten persistent in PostgreSQL via Cloud SQL
 
 ### Letzter verifizierter Sichtstand
 
@@ -128,6 +133,8 @@ Du brauchst dafuer:
    - `stabs-api`
 2. eine Zielregion, moeglichst dieselbe wie beim Frontend
 3. einen Build-/Deploy-Weg fuer `apps/api`
+4. eine PostgreSQL-Datenbank, vorzugsweise als Cloud SQL Instanz
+5. Secret-Verwaltung fuer `DATABASE_URL`
 
 ### Schritt 6: Umgebungsvariablen planen
 
@@ -139,6 +146,11 @@ Schon jetzt solltest du diese Trennung vorsehen:
   - Datenbank-URL
   - Auth-/Session-Konfiguration
   - spaeter Secret-Parameter
+
+Fuer den aktuellen Live-Stand gilt konkret:
+
+- `DATABASE_URL` liegt in Secret Manager als Secret `stabs-api-database-url`
+- Cloud Run bindet die Cloud-SQL-Instanz `tommys-stabssoftware:europe-west4:stabs-db` an
 
 ## 5. Was du lokal bzw. im Repo vorbereiten solltest
 
@@ -171,6 +183,9 @@ Zusatz fuer dieses Repo:
 - `apps/api/package-lock.json` ist vorhanden
 - `apps/api/Dockerfile` baut mit `npm ci`
 - `apps/api/scripts/deploy-cloud-run.ps1` enthaelt den lokale CLI-Deploy-Weg
+- `apps/api/prisma/schema.prisma` definiert das Incident-Schema
+- `apps/api/prisma/migrations` enthaelt die produktive Initialmigration
+- der Container fuehrt beim Start `prisma migrate deploy` aus
 
 ## 6. Empfohlene Einfuehrungsreihenfolge
 
@@ -178,10 +193,13 @@ Zusatz fuer dieses Repo:
 2. GitHub-Repository bereitstellen
 3. Firebase App Hosting fuer `firebase-web` verbinden
 4. Cloud Run fuer `apps/api` deployen
-5. API-URL ermitteln
-6. `NEXT_PUBLIC_API_BASE_URL` im Frontend setzen
-7. Frontend neu ausrollen
-8. Verbindung testen
+5. Cloud SQL fuer PostgreSQL bereitstellen
+6. `DATABASE_URL` in Secret Manager ablegen
+7. Cloud Run mit Cloud SQL und Secret verbinden
+8. API-URL ermitteln
+9. `NEXT_PUBLIC_API_BASE_URL` im Frontend setzen
+10. Frontend neu ausrollen
+11. Verbindung testen
 
 ## 7. Technische Zielkonfiguration fuer dieses Repo
 
@@ -195,6 +213,8 @@ Zusatz fuer dieses Repo:
 
 - Plattform: Cloud Run
 - Source Root: `stabs-app/apps/api`
+- Datenhaltung: PostgreSQL auf Cloud SQL
+- Migrationspfad: Prisma
 
 ## 8. Erster Verbindungscheck
 
@@ -205,6 +225,7 @@ Wenn alles verbunden ist, pruefst du:
 3. Frontend kennt die API-Basis-URL
 4. Frontend zeigt im Live-Bereich den Backend-Status und die erste Lage
 5. Browser-Konsole zeigt keine CORS- oder Netzwerkfehler
+6. neu angelegte Lagen erscheinen nach API-Refresh weiterhin, also nicht nur innerhalb derselben Prozesslaufzeit
 
 ## 8a. Erkenntnisse aus dem ersten Firebase-Rollout
 
@@ -249,14 +270,28 @@ Fuer dieses Repo gilt damit praktisch:
 5. `styled-jsx` nicht aus den Frontend-Dependencies entfernen
 6. API als eigenen Cloud-Run-Service getrennt betreiben
 
-## 9. Spaetere Ausbaustufe
+## 9. Aktueller Betriebszusatz fuer Persistenz
+
+Fuer den jetzt erreichten Live-Stand gelten zusaetzlich diese technischen Leitplanken:
+
+1. `Cloud SQL Admin API` muss im Projekt aktiviert sein
+2. Die Cloud-SQL-Instanz laeuft aktuell als `POSTGRES_17`
+3. Der Cloud-Run-Service-Account braucht mindestens:
+   - `roles/cloudsql.client`
+   - Zugriff auf Secret `stabs-api-database-url`
+4. Das Deploy-Skript `apps/api/scripts/deploy-cloud-run.ps1` setzt:
+   - `--add-cloudsql-instances`
+   - `--set-secrets DATABASE_URL=stabs-api-database-url:latest`
+5. Incident-Seeding erfolgt nur dann, wenn die Datenbank noch leer ist
+
+## 10. Spaetere Ausbaustufe
 
 Spaeter moeglich:
 
 - gemeinsame Domain
 - Routing ueber Firebase Hosting / Rewrite
-- Secret Manager statt einfacher Umgebungsvariablen
-- Managed PostgreSQL-Anbindung
+- persistente Auth-/Benutzerdaten statt Demo-In-Memory-Login
+- Audit-/Historienmodell auf demselben PostgreSQL-Kern
 
 ## 10. Aenderungsprotokoll
 

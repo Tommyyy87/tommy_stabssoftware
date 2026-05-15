@@ -1,7 +1,7 @@
 # Umsetzungsplan Stabsunterstuetzungssoftware
 
-Version: 1.0  
-Stand: 2026-05-13  
+Version: 1.1  
+Stand: 2026-05-15  
 Status: Projekt- und Entwicklungsroadmap  
 Bezug:
 
@@ -107,12 +107,34 @@ Den minimal notwendigen gemeinsamen Einsatzkern bereitstellen.
 
 - `MVP 0.1`
 
+### Verifizierter Ist-Stand am 2026-05-15
+
+Fuer den aktuellen Live-Stand ist aus Phase C bereits praktisch erreicht:
+
+- Demo-Login im Frontend
+- Benutzerstatus im Frontend
+- Lagen koennen ueber das Frontend angelegt werden
+- Incident-Daten werden persistent in PostgreSQL gehalten
+- Grundrechte fuer Incident-Lesen/-Anlegen/-Bearbeiten greifen im Backend
+
+Noch offen innerhalb des Plattformkerns:
+
+- Demo-Authentifizierung durch persistente Benutzer-/Rollendaten ersetzen
+- Audit-Basis fuer Lageaenderungen vervollstaendigen
+- lagebezogene Mitgliedschaften technisch ausbauen
+
 ### Abnahme fuer Phase C
 
 - Benutzer koennen sich anmelden.
 - Lagen koennen angelegt werden.
 - Benutzer koennen Lagen zugeordnet werden.
 - Rechte werden grundlegend durchgesetzt.
+
+Einordnung zum aktuellen Stand:
+
+- Die ersten zwei Punkte sind im Live-System bereits sichtbar erfuellt.
+- Die Rechtebasis ist fuer Incident-Endpunkte grundlegend umgesetzt.
+- Benutzer-Lage-Zuordnung und belastbare Auditbasis sind die naechsten logischen Luecken innerhalb von Phase C.
 
 ## 4.4 Phase D: Nachrichten und Tagebuch
 
