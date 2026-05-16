@@ -1,6 +1,6 @@
 # Umsetzungsplan Stabsunterstuetzungssoftware
 
-Version: 1.2  
+Version: 1.3  
 Stand: 2026-05-16  
 Status: Projekt- und Entwicklungsroadmap  
 Bezug:
@@ -718,3 +718,7 @@ Noch offen bis zum naechsten funktionalen Meilenstein:
 - Incident-gebundene Message-Endpunkte fuer Liste, Anlage, Bearbeitung und Verlauf vorbereitet.
 - Nachrichten-Frontend aus der Startseite in eine eigene Route `/messages` ueberfuehrt.
 - Startseite bewusst wieder kompakter gehalten, damit Facharbeit nicht in einer einzigen Scrollseite endet.
+
+### Version 1.3 - 2026-05-16
+
+- Dokumentation auf den Code-Stand mit eigenem `messages`-Modul und Route `/messages` nachgezogen.

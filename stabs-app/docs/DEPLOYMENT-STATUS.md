@@ -1,6 +1,6 @@
 # Deployment-Status
 
-Version: `1.4`  
+Version: `1.5`  
 Stand: `2026-05-16`  
 Status: `Live-Betrieb / Referenz fuer Weiterentwicklung`
 
@@ -190,3 +190,11 @@ Zum Stand `2026-05-16` ist zwischen zwei Ebenen zu unterscheiden:
 
 - `Live-Betrieb`: der bereits ausgerollte Incident-Kern mit persistenter Incident-Datenhaltung.
 - `Erweiterter Code-Stand`: Audit/Historie und persistente Auth sind im Repository umgesetzt und lokal verifiziert, aber noch nicht als neuer Live-Stand in Cloud SQL, Cloud Run und Firebase App Hosting nachgezogen.
+
+## 15. Dokumentationsstand
+
+Diese Betriebsdoku ist auf den Repository-Stand `167b711` fortgeschrieben. Sie trennt
+bewusst zwischen:
+
+- bereits live verifiziertem Incident-Kern
+- lokal verifiziertem erweitertem Auth-/Audit-/Messages-Stand

@@ -1,10 +1,15 @@
 # Stabs-App
 
-Monorepo fuer die browserbasierte Stabsunterstuetzungssoftware mit laufendem Frontend auf Firebase App Hosting und laufender API auf Cloud Run.
+Monorepo fuer die browserbasierte Stabsunterstuetzungssoftware mit:
+
+- Frontend auf Firebase App Hosting
+- API auf Cloud Run
+- PostgreSQL auf Cloud SQL
+- produktionsnahem Web-Deploy-Pfad ueber `firebase-web`
 
 ## Struktur
 
-- `apps/web`: Next.js-Frontend
+- `apps/web`: urspruenglicher Frontend-Quellstand
 - `apps/api`: NestJS-Backend
 - `firebase-web`: eigenstaendiger Firebase-App-Hosting-Deploy-Ordner
 - `packages/types`: gemeinsame Typdefinitionen
@@ -13,24 +18,38 @@ Monorepo fuer die browserbasierte Stabsunterstuetzungssoftware mit laufendem Fro
 - `infra/docker`: Infrastrukturgrundlagen
 - `docs`: technische Projektdokumentation
 
-## Aktueller Betriebsstand
+## Aktueller Gesamtstand
 
-Der aktuelle Online-Stand fuer `MVP 0.1` ist:
+Stand dieses Repositories: `2026-05-16`, Commit `167b711`
 
+Es gibt aktuell zwei relevante Ebenen:
+
+1. `Live-Betrieb`
 - Frontend live ueber Firebase App Hosting
 - Backend live ueber Cloud Run
-- Frontend kennt die echte API-URL
-- Health-Check und erste Incident-Liste werden im Frontend sichtbar angezeigt
+- persistente Incident-Datenhaltung in PostgreSQL
+- sichtbare Startseite mit API-Status und Incident-Arbeitsansicht
 
-### Live-Adressen
+2. `lokal verifizierter erweiterter Code-Stand`
+- persistente Auth mit Rollen und Sessions
+- Incident-Historie
+- neues `messages`-Modul im Backend
+- eigene Frontend-Route `/messages` fuer die Nachrichtenzentrale
+
+Wichtig: Der zweite Stand ist im Code umgesetzt und lokal verifiziert, aber
+noch nicht als neuer Live-Betriebsstand ausgerollt.
+
+## Live-Adressen
 
 - Frontend: `https://stabsbackend--tommys-stabssoftware.europe-west4.hosted.app/`
-- Backend Health: `https://stabs-api-1059988621010.europe-west4.run.app/api/health`
 - Backend Basis: `https://stabs-api-1059988621010.europe-west4.run.app`
+- Backend Health: `https://stabs-api-1059988621010.europe-west4.run.app/api/health`
+- Backend Incidents: `https://stabs-api-1059988621010.europe-west4.run.app/api/incidents`
 
-## Lokaler Hinweis
+## Fachliche Modulrouten im Code-Stand
 
-Die Projektmetadaten zielen auf `Node.js 24 LTS`. Auf der aktuellen Maschine war beim Anlegen des Geruests `Node.js 20.17.0` vorhanden. Vor der ersten echten Installation und Laufzeitpruefung sollte deshalb auf `Node.js 24 LTS` gewechselt werden.
+- `/`: Ueberblick, Betriebsstatus, Incident-Kernzugang
+- `/messages`: eigenstaendige Nachrichtenzentrale fuer Listen-, Detail- und Bearbeitungsarbeit
 
 ## Zugriffe
 
@@ -40,34 +59,47 @@ Die Projektmetadaten zielen auf `Node.js 24 LTS`. Auf der aktuellen Maschine war
 - Cloud-Run-Service API: `stabs-api`
 - App-Hosting-Backend: `stabsbackend`
 
-## Naechste Schritte
+## Lokale Verifikation
 
-1. Frontend-Login mit Demo-Zugang sichtbar machen
-2. Benutzerstatus im Frontend anzeigen
-3. Lagen nicht nur lesen, sondern aus der Oberflaeche anlegen
-4. Datenbank statt In-Memory-Daten anbinden
+### API
 
-## MVP-0.1-Stand
+Arbeitsverzeichnis: `stabs-app/apps/api`
 
-Aktuell enthalten:
+- `npm run prisma:generate`
+- `npm run build`
+- `npm test`
 
-- Next.js-Frontend als Projektoberflaeche
-- NestJS-API mit `health`, `auth` und `incidents`
-- Demo-Login mit Seed-Nutzern
-- erste Rollen-/Berechtigungsgrundlage
-- erste Lageverwaltung als In-Memory-Startpunkt
+### Frontend
 
-## Verifikation
+Arbeitsverzeichnis: `stabs-app/firebase-web`
 
-Reproduzierbarer Foundation-Check:
+- `npm test`
+- `npm run typecheck`
+- `npm run build`
 
-- `npm run verify:foundation`
-- `curl https://stabs-api-1059988621010.europe-west4.run.app/api/health`
-- `curl https://stabs-api-1059988621010.europe-west4.run.app/api/incidents`
-- Frontend im Browser oeffnen und Live-Verbindungsbereich pruefen
+## Offene Betriebs-Schritte
 
-Geprueft werden:
+Bevor der neue Nachrichtenpfad als echter Online-Stand gilt, muessen noch erfolgen:
 
-- Demo-Login
-- Sitzungs- und Rechteauflösung
-- erste Lageendpunkte
+1. Prisma-Migrationen nach Cloud SQL deployen
+2. Backend als neue Cloud-Run-Revision deployen
+3. Frontend mit `/messages` neu deployen
+4. Live-Nachverifikation fuer:
+   - Login
+   - Incident-Historie
+   - Nachrichtenliste
+   - Nachrichtenerfassung
+   - Status-/Zuweisungsaenderung
+   - Nachrichtenverlauf
+
+## Technische Hinweise
+
+- Zielruntime ist `Node.js 24 LTS`
+- das produktionsnahe Frontend deployt aus `firebase-web`, nicht aus `apps/web`
+- `Next.js 15.2.9`, `output: "standalone"` und `styled-jsx` sind fuer den aktuellen Deploy-Pfad beizubehalten
+
+## Weiterfuehrende Doku
+
+- [ARCHITECTURE.md](./docs/ARCHITECTURE.md)
+- [DEPLOYMENT-STATUS.md](./docs/DEPLOYMENT-STATUS.md)
+- [Umsetzungsplan-Stabsunterstuetzungssoftware](../Umsetzungsplan-Stabsunterstuetzungssoftware.md)
