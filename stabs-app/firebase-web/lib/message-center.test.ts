@@ -18,6 +18,27 @@ test("sortMessages orders by message time descending", () => {
   assert.equal(sorted.at(-1)?.trackingNumber, "E-240516-015");
 });
 
+test("critical priorities sort above lower priorities when timestamps are equal", () => {
+  const sorted = sortMessages([
+    {
+      ...demoMessages[0],
+      id: "same-a",
+      trackingNumber: "E-test-001",
+      priority: "hoch",
+      messageTime: "2026-05-16T12:00:00.000Z"
+    },
+    {
+      ...demoMessages[0],
+      id: "same-b",
+      trackingNumber: "E-test-002",
+      priority: "staatsnot",
+      messageTime: "2026-05-16T12:00:00.000Z"
+    }
+  ]);
+
+  assert.equal(sorted[0]?.trackingNumber, "E-test-002");
+});
+
 test("filterMessages narrows by status and text query", () => {
   const result = filterMessages(demoMessages, {
     status: "neu",

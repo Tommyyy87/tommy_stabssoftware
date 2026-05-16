@@ -55,7 +55,13 @@ export type MessageChannel =
   | "melder"
   | "lagekontakt";
 
-export type MessagePriority = "niedrig" | "normal" | "hoch" | "sofort";
+export type MessagePriority =
+  | "niedrig"
+  | "normal"
+  | "hoch"
+  | "sofort"
+  | "blitz"
+  | "staatsnot";
 
 export type MessageStatus =
   | "neu"
@@ -63,6 +69,26 @@ export type MessageStatus =
   | "in_bearbeitung"
   | "weitergeleitet"
   | "erledigt";
+
+export type MessageDispatchStatus =
+  | "neu"
+  | "gesehen"
+  | "quittiert"
+  | "in_bearbeitung";
+
+export type MessageDispatchSnapshot = {
+  id: string;
+  messageId: string;
+  incidentId: string;
+  targetRole: string;
+  dispatchedAt: string;
+  dispatchedBy: string;
+  dispatchNote: string;
+  seenAt: string | null;
+  acknowledgedAt: string | null;
+  acknowledgedBy: string | null;
+  processingStatus: MessageDispatchStatus;
+};
 
 export type MessageSnapshot = {
   id: string;
@@ -85,6 +111,17 @@ export type MessageSnapshot = {
   createdBy: string;
   updatedAt: string;
   updatedBy: string;
+  dispatches: MessageDispatchSnapshot[];
+};
+
+export type JournalEntrySnapshot = {
+  id: string;
+  incidentId: string;
+  title: string;
+  body: string;
+  createdAt: string;
+  createdBy: string;
+  sourceMessageId: string | null;
 };
 
 export type MessageHistoryChange = {
@@ -179,6 +216,34 @@ type UpdateMessageOptions = AuthenticatedRequestOptions & {
 type MessageHistoryOptions = AuthenticatedRequestOptions & {
   incidentId: string;
   messageId: string;
+};
+
+type DispatchMessageOptions = AuthenticatedRequestOptions & {
+  incidentId: string;
+  messageId: string;
+  input: {
+    targetRoles: string[];
+    note?: string;
+  };
+};
+
+type AcknowledgeDispatchOptions = AuthenticatedRequestOptions & {
+  incidentId: string;
+  messageId: string;
+  dispatchId: string;
+};
+
+type JournalOptions = AuthenticatedRequestOptions & {
+  incidentId: string;
+};
+
+type CreateJournalEntryOptions = AuthenticatedRequestOptions & {
+  incidentId: string;
+  input: {
+    title: string;
+    body: string;
+  };
+  sourceMessageId?: string;
 };
 
 type LoginOptions = RequestOptions & {
@@ -428,6 +493,76 @@ export async function getMessageHistory(
       method: "GET",
       headers: createJsonHeaders(options.token),
       cache: "no-store"
+    },
+    fetchImpl
+  );
+}
+
+export async function dispatchMessage(
+  options: DispatchMessageOptions
+): Promise<MessageSnapshot> {
+  const baseUrl = resolveBaseUrl(options.baseUrl);
+  const fetchImpl = options.fetchImpl ?? fetch;
+
+  return requestJson<MessageSnapshot>(
+    `${baseUrl}/api/incidents/${options.incidentId}/messages/${options.messageId}/dispatches`,
+    {
+      method: "POST",
+      headers: createJsonHeaders(options.token),
+      body: JSON.stringify(options.input)
+    },
+    fetchImpl
+  );
+}
+
+export async function acknowledgeMessageDispatch(
+  options: AcknowledgeDispatchOptions
+): Promise<MessageSnapshot> {
+  const baseUrl = resolveBaseUrl(options.baseUrl);
+  const fetchImpl = options.fetchImpl ?? fetch;
+
+  return requestJson<MessageSnapshot>(
+    `${baseUrl}/api/incidents/${options.incidentId}/messages/${options.messageId}/dispatches/${options.dispatchId}/acknowledge`,
+    {
+      method: "PATCH",
+      headers: createJsonHeaders(options.token)
+    },
+    fetchImpl
+  );
+}
+
+export async function listJournalEntries(
+  options: JournalOptions
+): Promise<JournalEntrySnapshot[]> {
+  const baseUrl = resolveBaseUrl(options.baseUrl);
+  const fetchImpl = options.fetchImpl ?? fetch;
+
+  return requestJson<JournalEntrySnapshot[]>(
+    `${baseUrl}/api/incidents/${options.incidentId}/journal`,
+    {
+      method: "GET",
+      headers: createJsonHeaders(options.token),
+      cache: "no-store"
+    },
+    fetchImpl
+  );
+}
+
+export async function createJournalEntry(
+  options: CreateJournalEntryOptions
+): Promise<JournalEntrySnapshot> {
+  const baseUrl = resolveBaseUrl(options.baseUrl);
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const path = options.sourceMessageId
+    ? `${baseUrl}/api/incidents/${options.incidentId}/messages/${options.sourceMessageId}/journal-entries`
+    : `${baseUrl}/api/incidents/${options.incidentId}/journal`;
+
+  return requestJson<JournalEntrySnapshot>(
+    path,
+    {
+      method: "POST",
+      headers: createJsonHeaders(options.token),
+      body: JSON.stringify(options.input)
     },
     fetchImpl
   );

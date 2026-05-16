@@ -38,7 +38,8 @@ test("listByIncident returns messages for one incident", async () => {
             createdAt: "2026-05-16T11:47:00.000Z",
             createdBy: "System Admin",
             updatedAt: "2026-05-16T11:47:00.000Z",
-            updatedBy: "System Admin"
+            updatedBy: "System Admin",
+            dispatches: []
           }
         ];
       }
@@ -105,7 +106,8 @@ test("create normalizes text and forwards actor id", async () => {
           createdAt: "2026-05-16T12:01:00.000Z",
           createdBy: "System Admin",
           updatedAt: "2026-05-16T12:01:00.000Z",
-          updatedBy: "System Admin"
+          updatedBy: "System Admin",
+          dispatches: []
         };
       }
     } as never
@@ -206,4 +208,117 @@ test("listHistory returns the persisted message history", async () => {
 
   assert.equal(history.length, 1);
   assert.equal(history[0]?.changes[0]?.field, "status");
+});
+
+test("dispatch requires messages.dispatch permission", async () => {
+  const service = new MessagesService(
+    {
+      async getPermissionsForCurrentUser() {
+        return {
+          user: {
+            id: "user-kgs"
+          },
+          permissions: ["messages.read"]
+        };
+      }
+    } as never,
+    {} as never
+  );
+
+  await assert.rejects(
+    service.dispatch(
+      "incident-001",
+      "message-001",
+      { targetRoles: ["s2"] },
+      "Bearer session-user-kgs"
+    ),
+    /Keine Berechtigung zum Verteilen von Nachrichten/
+  );
+});
+
+test("acknowledgeDispatch forwards actor id to the configured store", async () => {
+  let repositoryCall:
+    | {
+        incidentId: string;
+        messageId: string;
+        dispatchId: string;
+        acknowledgedByUserId: string;
+      }
+    | undefined;
+
+  const service = new MessagesService(
+    {
+      async getPermissionsForCurrentUser() {
+        return {
+          user: {
+            id: "user-s2"
+          },
+          permissions: ["messages.acknowledge"]
+        };
+      }
+    } as never,
+    {
+      async acknowledgeDispatch(
+        incidentId: string,
+        messageId: string,
+        dispatchId: string,
+        acknowledgedByUserId: string
+      ) {
+        repositoryCall = {
+          incidentId,
+          messageId,
+          dispatchId,
+          acknowledgedByUserId
+        };
+
+        return {
+          id: "message-001",
+          incidentId,
+          trackingNumber: "E-240516-001",
+          direction: "eingang",
+          channel: "funk",
+          priority: "sofort",
+          status: "weitergeleitet",
+          messageTime: "2026-05-16T11:45:00.000Z",
+          recordedAt: "2026-05-16T11:47:00.000Z",
+          senderLabel: "Abschnitt Nord",
+          recipientLabel: "Stabsraum S2/S3",
+          subject: "Evakuierung vorbereiten",
+          body: "Winddreher nach Ost.",
+          assignee: "S3 Einsatz",
+          distribution: "S2, S3",
+          notes: "Quittierung ausstehend.",
+          createdAt: "2026-05-16T11:47:00.000Z",
+          createdBy: "System Admin",
+          updatedAt: "2026-05-16T12:10:00.000Z",
+          updatedBy: "S2 Lage",
+          dispatches: [
+            {
+              id: dispatchId,
+              messageId,
+              incidentId,
+              targetRole: "s2",
+              dispatchedAt: "2026-05-16T11:50:00.000Z",
+              dispatchedBy: "KGS Nachrichtenzentrale",
+              dispatchNote: "Lagebewertung erforderlich.",
+              seenAt: "2026-05-16T12:10:00.000Z",
+              acknowledgedAt: "2026-05-16T12:10:00.000Z",
+              acknowledgedBy: "S2 Lage",
+              processingStatus: "quittiert"
+            }
+          ]
+        };
+      }
+    } as never
+  );
+
+  const updated = await service.acknowledgeDispatch(
+    "incident-001",
+    "message-001",
+    "dispatch-001",
+    "Bearer session-user-s2"
+  );
+
+  assert.equal(repositoryCall?.acknowledgedByUserId, "user-s2");
+  assert.equal(updated.dispatches[0]?.processingStatus, "quittiert");
 });

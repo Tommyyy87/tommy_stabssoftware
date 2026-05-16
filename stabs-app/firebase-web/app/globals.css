@@ -719,6 +719,27 @@ h4 {
   line-height: 1.55;
 }
 
+.dispatch-list {
+  display: grid;
+  gap: 12px;
+}
+
+.dispatch-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  background: var(--surface-strong);
+  display: grid;
+  gap: 8px;
+}
+
+.dispatch-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
 @media (min-width: 840px) {
   .grid-panel {
     grid-template-columns: 1.4fr 1fr;

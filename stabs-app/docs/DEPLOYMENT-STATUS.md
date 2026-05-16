@@ -13,10 +13,12 @@ Zum Stand `2026-05-16` ist der erste echte Online-Kern live. Zusaetzlich liegt e
 - Frontend zeigt echten Backend-Status
 - Frontend erlaubt Login, Benutzerstatus und Lagearbeit
 - Frontend enthaelt jetzt zusaetzlich eine eigene Route `/messages` fuer die Nachrichtenzentrale
+- Frontend enthaelt jetzt zusaetzlich eine vorbereitete Route `/journal` fuer das Tagebuchmodul
 - Incident-Daten liegen persistent in PostgreSQL ueber Cloud SQL
 - Audit-/Historienlogik fuer Lagen ist im Code umgesetzt, aber noch nicht als Live-Stand nachverifiziert
 - persistente Benutzer-, Rollen- und Session-Daten sind im Code umgesetzt, aber noch nicht als Live-Stand nachverifiziert
 - Nachrichten-Persistenz und Message-Audit sind im Code umgesetzt, aber noch nicht als Live-Stand nachverifiziert
+- Rollenpostfaecher, Quittierung und bewusste Tagebuchuebernahme sind im Code umgesetzt, aber noch nicht als Live-Stand nachverifiziert
 
 Damit ist das Projekt nicht mehr nur ein online sichtbarer Demo-Kern, sondern hat jetzt auch eine erste dauerhafte Datenbasis fuer die Lageverwaltung.
 
@@ -101,6 +103,7 @@ Zusatz fuer den lokalen, noch nicht live nachverifizierten Code-Stand:
 - Frontend-Typecheck, Frontend-Tests und Frontend-Build fuer Historienansicht laufen lokal erfolgreich.
 - Frontend-Typecheck, Frontend-Tests und Frontend-Build fuer die erste Nachrichtenzentrale laufen lokal erfolgreich.
 - API-Build, API-Tests, Frontend-Typecheck, Frontend-Tests und Frontend-Build fuer den echten `messages`-Pfad laufen lokal erfolgreich.
+- API-Build, API-Tests, Frontend-Typecheck, Frontend-Tests und Frontend-Build fuer Rollenpostfaecher, Quittierung und Journalpfad laufen lokal erfolgreich.
 
 ## 9. Zeitlinie
 
@@ -144,6 +147,16 @@ Zusatz fuer den lokalen, noch nicht live nachverifizierten Code-Stand:
 - Frontend auf eigene Modulroute `/messages` umgestellt und an echte Message-Endpunkte angebunden.
 - Startseite verschlankt, damit die eigentliche Nachrichtenarbeit nicht als Single-Page-Block weiterwachsen muss.
 
+### 2026-05-16-04
+
+- Prisma-Schema um `MessageDispatch` und `JournalEntry` erweitert.
+- neue Migration `20260516233000_add_message_dispatch_and_journal` angelegt.
+- API um Rollenpostfach-Zustellung und Quittierung erweitert.
+- neues `journal`-Modul fuer bewusste Uebernahme aus Nachrichten umgesetzt.
+- Demo-Benutzer fuer `KGS`, `S1`, `S3`, `S4`, `S5` und `S6` als erster Uebungsstand ergaenzt.
+- Frontend-Nachrichtenzentrale um `mein Eingang`, Rollenpostfaecher, Quittierung und `ins Tagebuch uebernehmen` erweitert.
+- Frontend-Route `/journal` als sichtbarer Modulanker eingefuehrt.
+
 ## 10. Letzte relevante Commits
 
 - `d18c479` `Add interactive incident workspace`
@@ -167,12 +180,13 @@ Bevor der neue Kern als echter Betriebsstand gelten kann, sind diese Schritte er
 1. neue Prisma-Migration in Cloud SQL deployen
 2. Backend als neue Cloud-Run-Revision deployen
 3. Frontend-Deploy fuer Historienansicht und `/messages`-Route durchziehen
-4. Login, Session, Incident-Anlage, Incident-Bearbeitung, Nachrichtenliste, Nachrichtenerfassung und Nachrichtenhistorie gegen den Live-Stand gezielt nachverifizieren
+4. Login, Session, Incident-Anlage, Incident-Bearbeitung, Nachrichtenliste, Nachrichtenerfassung, Rollenpostfach-Zustellung, Quittierung und Nachrichtenhistorie gegen den Live-Stand gezielt nachverifizieren
+5. danach den Journalpfad gegen den Live-Stand nachverifizieren
 
 Danach ist die naechste Entwicklungsstufe:
 
 1. lagebezogene Mitgliedschaften und feinere Rollen-/Rechtepruefung anschliessen
-2. Tagebuch direkt auf demselben persistenten Incident-/Message-Kern aufbauen
+2. eigenstaendige Journal-Arbeitsflaeche ueber `/journal` ausbauen
 3. danach weitere Fachmodule auf denselben persistenten Kern setzen
 
 ## 13. Entwicklungsstand 2026-05-15-02

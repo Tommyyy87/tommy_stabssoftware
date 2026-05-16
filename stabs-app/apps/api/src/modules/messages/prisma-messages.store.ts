@@ -1,8 +1,11 @@
+import crypto from "node:crypto";
 import { Injectable, OnModuleInit } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
 import { getSeededMessagesForIncidents, resolveUserDisplayName } from "../../shared/demo-store";
 import {
   CreateMessageInput,
+  DispatchMessageInput,
+  MessageDispatchSummary,
   MessageHistoryChange,
   MessageHistoryEntry,
   MessageStore,
@@ -15,7 +18,8 @@ export class PrismaMessagesStore implements MessageStore, OnModuleInit {
   constructor(private readonly prisma: PrismaService) {}
 
   async onModuleInit() {
-    const messageCount = await this.prisma.message.count();
+    const prisma = this.prisma as any;
+    const messageCount = await prisma.message.count();
 
     if (messageCount > 0) {
       return;
@@ -24,7 +28,7 @@ export class PrismaMessagesStore implements MessageStore, OnModuleInit {
     const seededMessages = getSeededMessagesForIncidents();
 
     for (const seeded of seededMessages) {
-      await this.prisma.message.create({
+      await prisma.message.create({
         data: {
           id: seeded.id,
           incidentId: seeded.incidentId,
@@ -46,6 +50,24 @@ export class PrismaMessagesStore implements MessageStore, OnModuleInit {
           createdByUserId: seeded.createdBy,
           updatedAt: new Date(seeded.updatedAt),
           updatedByUserId: seeded.updatedBy,
+          dispatches: {
+            create: seeded.dispatches.map((dispatch) => ({
+              id: dispatch.id,
+              incidentId: dispatch.incidentId,
+              targetRole: dispatch.targetRole,
+              dispatchedAt: new Date(dispatch.dispatchedAt),
+              dispatchedByUserId: this.resolveSeedUserId(dispatch.dispatchedBy),
+              dispatchNote: dispatch.dispatchNote,
+              seenAt: dispatch.seenAt ? new Date(dispatch.seenAt) : null,
+              acknowledgedAt: dispatch.acknowledgedAt
+                ? new Date(dispatch.acknowledgedAt)
+                : null,
+              acknowledgedByUserId: dispatch.acknowledgedBy
+                ? this.resolveSeedUserId(dispatch.acknowledgedBy)
+                : null,
+              processingStatus: dispatch.processingStatus
+            }))
+          },
           auditEntries: {
             create: {
               id: `message-audit-seed-${seeded.id}`,
@@ -66,7 +88,8 @@ export class PrismaMessagesStore implements MessageStore, OnModuleInit {
   }
 
   async listByIncident(incidentId: string): Promise<MessageSummary[]> {
-    const messages = await this.prisma.message.findMany({
+    const prisma = this.prisma as any;
+    const messages = await prisma.message.findMany({
       where: {
         incidentId
       },
@@ -80,6 +103,21 @@ export class PrismaMessagesStore implements MessageStore, OnModuleInit {
           select: {
             displayName: true
           }
+        },
+        dispatches: {
+          include: {
+            dispatchedBy: {
+              select: {
+                displayName: true
+              }
+            },
+            acknowledgedBy: {
+              select: {
+                displayName: true
+              }
+            }
+          },
+          orderBy: [{ dispatchedAt: "desc" }, { id: "desc" }]
         }
       },
       orderBy: [{ messageTime: "desc" }, { createdAt: "desc" }, { id: "desc" }]
@@ -94,7 +132,8 @@ export class PrismaMessagesStore implements MessageStore, OnModuleInit {
     incidentId: string,
     messageId: string
   ): Promise<MessageHistoryEntry[] | null> {
-    const message = await this.prisma.message.findFirst({
+    const prisma = this.prisma as any;
+    const message = await prisma.message.findFirst({
       where: {
         id: messageId,
         incidentId
@@ -108,7 +147,7 @@ export class PrismaMessagesStore implements MessageStore, OnModuleInit {
       return null;
     }
 
-    const entries = await this.prisma.messageAuditEntry.findMany({
+    const entries = await prisma.messageAuditEntry.findMany({
       where: {
         incidentId,
         messageId
@@ -141,7 +180,8 @@ export class PrismaMessagesStore implements MessageStore, OnModuleInit {
     createdByUserId: string
   ): Promise<MessageSummary> {
     const now = new Date();
-    const message = await this.prisma.message.create({
+    const prisma = this.prisma as any;
+    const message = await prisma.message.create({
       data: {
         id: `message-${crypto.randomUUID()}`,
         incidentId,
@@ -188,6 +228,21 @@ export class PrismaMessagesStore implements MessageStore, OnModuleInit {
           select: {
             displayName: true
           }
+        },
+        dispatches: {
+          include: {
+            dispatchedBy: {
+              select: {
+                displayName: true
+              }
+            },
+            acknowledgedBy: {
+              select: {
+                displayName: true
+              }
+            }
+          },
+          orderBy: [{ dispatchedAt: "desc" }, { id: "desc" }]
         }
       }
     });
@@ -201,7 +256,8 @@ export class PrismaMessagesStore implements MessageStore, OnModuleInit {
     input: UpdateMessageInput,
     updatedByUserId: string
   ): Promise<MessageSummary | null> {
-    const existing = await this.prisma.message.findFirst({
+    const prisma = this.prisma as any;
+    const existing = await prisma.message.findFirst({
       where: {
         id: messageId,
         incidentId
@@ -216,6 +272,21 @@ export class PrismaMessagesStore implements MessageStore, OnModuleInit {
           select: {
             displayName: true
           }
+        },
+        dispatches: {
+          include: {
+            dispatchedBy: {
+              select: {
+                displayName: true
+              }
+            },
+            acknowledgedBy: {
+              select: {
+                displayName: true
+              }
+            }
+          },
+          orderBy: [{ dispatchedAt: "desc" }, { id: "desc" }]
         }
       }
     });
@@ -227,7 +298,7 @@ export class PrismaMessagesStore implements MessageStore, OnModuleInit {
     const changes = this.buildChanges(existing, input);
     const now = new Date();
 
-    const updated = await this.prisma.message.update({
+    const updated = await prisma.message.update({
       where: {
         id: existing.id
       },
@@ -266,6 +337,21 @@ export class PrismaMessagesStore implements MessageStore, OnModuleInit {
           select: {
             displayName: true
           }
+        },
+        dispatches: {
+          include: {
+            dispatchedBy: {
+              select: {
+                displayName: true
+              }
+            },
+            acknowledgedBy: {
+              select: {
+                displayName: true
+              }
+            }
+          },
+          orderBy: [{ dispatchedAt: "desc" }, { id: "desc" }]
         }
       }
     });
@@ -273,28 +359,150 @@ export class PrismaMessagesStore implements MessageStore, OnModuleInit {
     return this.toMessageSummary(updated);
   }
 
-  private toMessageSummary(message: {
-    id: string;
-    incidentId: string;
-    trackingNumber: string;
-    direction: MessageSummary["direction"];
-    channel: MessageSummary["channel"];
-    priority: MessageSummary["priority"];
-    status: MessageSummary["status"];
-    messageTime: Date;
-    recordedAt: Date;
-    senderLabel: string;
-    recipientLabel: string;
-    subject: string;
-    body: string;
-    assignee: string;
-    distribution: string;
-    notes: string;
-    createdAt: Date;
-    createdBy: { displayName: string };
-    updatedAt: Date;
-    updatedBy: { displayName: string };
-  }): MessageSummary {
+  async dispatch(
+    incidentId: string,
+    messageId: string,
+    input: DispatchMessageInput,
+    dispatchedByUserId: string
+  ): Promise<MessageSummary | null> {
+    const prisma = this.prisma as any;
+    const existing = await prisma.message.findFirst({
+      where: {
+        id: messageId,
+        incidentId
+      },
+      include: {
+        dispatches: true
+      }
+    });
+
+    if (!existing) {
+      return null;
+    }
+
+    await prisma.$transaction(async (tx: any) => {
+      for (const targetRole of input.targetRoles) {
+        const knownDispatch = existing.dispatches.find(
+          (entry: any) => entry.targetRole === targetRole
+        );
+
+        if (knownDispatch) {
+          await tx.messageDispatch.update({
+            where: {
+              id: knownDispatch.id
+            },
+            data: {
+              dispatchedAt: new Date(),
+              dispatchedByUserId,
+              dispatchNote: input.note ?? "",
+              seenAt: null,
+              acknowledgedAt: null,
+              acknowledgedByUserId: null,
+              processingStatus: "neu"
+            }
+          });
+          continue;
+        }
+
+        await tx.messageDispatch.create({
+          data: {
+            id: `dispatch-${crypto.randomUUID()}`,
+            incidentId,
+            messageId,
+            targetRole,
+            dispatchedByUserId,
+            dispatchNote: input.note ?? "",
+            processingStatus: "neu"
+          }
+        });
+      }
+
+      await tx.message.update({
+        where: {
+          id: messageId
+        },
+        data: {
+          status: "weitergeleitet",
+          distribution: input.targetRoles.join(", "),
+          updatedAt: new Date(),
+          updatedByUserId: dispatchedByUserId,
+          auditEntries: {
+            create: {
+              id: `message-audit-${crypto.randomUUID()}`,
+              incidentId,
+              actorUserId: dispatchedByUserId,
+              action: "updated",
+              summary: `Nachricht verteilt an ${input.targetRoles.join(", ")}.`,
+              changes: [
+                { field: "distribution", from: existing.distribution, to: input.targetRoles.join(", ") },
+                { field: "status", from: existing.status, to: "weitergeleitet" }
+              ]
+            }
+          }
+        }
+      });
+    });
+
+    return this.readMessageSummary(incidentId, messageId);
+  }
+
+  async acknowledgeDispatch(
+    incidentId: string,
+    messageId: string,
+    dispatchId: string,
+    acknowledgedByUserId: string
+  ): Promise<MessageSummary | null> {
+    const prisma = this.prisma as any;
+    const dispatch = await prisma.messageDispatch.findFirst({
+      where: {
+        id: dispatchId,
+        incidentId,
+        messageId
+      }
+    });
+
+    if (!dispatch) {
+      return null;
+    }
+
+    await prisma.$transaction(async (tx: any) => {
+      await tx.messageDispatch.update({
+        where: {
+          id: dispatchId
+        },
+        data: {
+          seenAt: dispatch.seenAt ?? new Date(),
+          acknowledgedAt: new Date(),
+          acknowledgedByUserId,
+          processingStatus: "quittiert"
+        }
+      });
+
+      await tx.message.update({
+        where: {
+          id: messageId
+        },
+        data: {
+          updatedAt: new Date(),
+          updatedByUserId: acknowledgedByUserId,
+          auditEntries: {
+            create: {
+              id: `message-audit-${crypto.randomUUID()}`,
+              incidentId,
+              actorUserId: acknowledgedByUserId,
+              action: "updated",
+              summary: `${dispatch.targetRole.toUpperCase()} hat den Eingang quittiert.`,
+              changes: [{ field: "notes", from: null, to: `${dispatch.targetRole} quittiert` }]
+            }
+          }
+        }
+      });
+    });
+
+    return this.readMessageSummary(incidentId, messageId);
+  }
+
+  private toMessageSummary(message: any): MessageSummary {
     return {
       id: message.id,
       incidentId: message.incidentId,
@@ -315,8 +523,85 @@ export class PrismaMessagesStore implements MessageStore, OnModuleInit {
       createdAt: message.createdAt.toISOString(),
       createdBy: message.createdBy.displayName,
       updatedAt: message.updatedAt.toISOString(),
-      updatedBy: message.updatedBy.displayName
+      updatedBy: message.updatedBy.displayName,
+      dispatches: message.dispatches.map((dispatch: any) =>
+        this.toDispatchSummary(dispatch)
+      )
     };
+  }
+
+  private toDispatchSummary(dispatch: any): MessageDispatchSummary {
+    return {
+      id: dispatch.id,
+      incidentId: dispatch.incidentId,
+      messageId: dispatch.messageId,
+      targetRole: dispatch.targetRole as MessageDispatchSummary["targetRole"],
+      dispatchedAt: dispatch.dispatchedAt.toISOString(),
+      dispatchedBy: dispatch.dispatchedBy.displayName,
+      dispatchNote: dispatch.dispatchNote,
+      seenAt: dispatch.seenAt?.toISOString() ?? null,
+      acknowledgedAt: dispatch.acknowledgedAt?.toISOString() ?? null,
+      acknowledgedBy: dispatch.acknowledgedBy?.displayName ?? null,
+      processingStatus:
+        dispatch.processingStatus as MessageDispatchSummary["processingStatus"]
+    };
+  }
+
+  private async readMessageSummary(incidentId: string, messageId: string) {
+    const prisma = this.prisma as any;
+    const message = await prisma.message.findFirst({
+      where: {
+        id: messageId,
+        incidentId
+      },
+      include: {
+        createdBy: {
+          select: {
+            displayName: true
+          }
+        },
+        updatedBy: {
+          select: {
+            displayName: true
+          }
+        },
+        dispatches: {
+          include: {
+            dispatchedBy: {
+              select: {
+                displayName: true
+              }
+            },
+            acknowledgedBy: {
+              select: {
+                displayName: true
+              }
+            }
+          },
+          orderBy: [{ dispatchedAt: "desc" }, { id: "desc" }]
+        }
+      }
+    });
+
+    return message ? this.toMessageSummary(message) : null;
+  }
+
+  private resolveSeedUserId(displayName: string) {
+    const knownUsers = [
+      "user-admin",
+      "user-kgs",
+      "user-s1",
+      "user-s2",
+      "user-s3",
+      "user-s4",
+      "user-s5",
+      "user-s6"
+    ];
+
+    return (
+      knownUsers.find((userId) => resolveUserDisplayName(userId) === displayName) ??
+      "user-admin"
+    );
   }
 
   private buildTrackingNumber(direction: MessageSummary["direction"], now: Date) {

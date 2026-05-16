@@ -2,11 +2,15 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  acknowledgeMessageDispatch,
   createIncident,
+  createJournalEntry,
   createMessage,
+  dispatchMessage,
   getIncidentHistory,
   getMessageHistory,
   listMessages,
+  listJournalEntries,
   loadApiSnapshot,
   loginWithDemoCredentials,
   readCurrentUser,
@@ -337,7 +341,8 @@ test("listMessages reads incident-scoped messages", async () => {
               createdAt: "2026-05-16T11:47:00.000Z",
               createdBy: "System Admin",
               updatedAt: "2026-05-16T11:47:00.000Z",
-              updatedBy: "System Admin"
+              updatedBy: "System Admin",
+              dispatches: []
             }
           ];
         }
@@ -402,7 +407,8 @@ test("createMessage posts a new incident-scoped message", async () => {
             createdAt: "2026-05-16T12:01:00.000Z",
             createdBy: "System Admin",
             updatedAt: "2026-05-16T12:01:00.000Z",
-            updatedBy: "System Admin"
+            updatedBy: "System Admin",
+            dispatches: []
           };
         }
       } as Response;
@@ -472,7 +478,8 @@ test("updateMessage patches one incident-scoped message", async () => {
             createdAt: "2026-05-16T11:47:00.000Z",
             createdBy: "System Admin",
             updatedAt: "2026-05-16T11:55:00.000Z",
-            updatedBy: "System Admin"
+            updatedBy: "System Admin",
+            dispatches: []
           };
         }
       } as Response;
@@ -538,4 +545,200 @@ test("getMessageHistory reads the message history with authorization", async () 
     authorization: "Bearer session-user-admin"
   });
   assert.equal(history[0]?.changes[0]?.field, "status");
+});
+
+test("dispatchMessage posts target roles for one message", async () => {
+  let request:
+    | { url: string; method?: string; authorization?: string; body?: string }
+    | null = null;
+
+  await dispatchMessage({
+    baseUrl: "https://example.test",
+    incidentId: "incident-001",
+    messageId: "message-001",
+    token: "session-user-kgs",
+    input: {
+      targetRoles: ["s2", "s4"],
+      note: "Bitte auswerten."
+    },
+    fetchImpl: async (input, init) => {
+      request = {
+        url: String(input),
+        method: init?.method,
+        authorization: String((init?.headers as Record<string, string>)?.authorization),
+        body: String(init?.body)
+      };
+
+      return {
+        ok: true,
+        async json() {
+          return {
+            id: "message-001",
+            incidentId: "incident-001",
+            trackingNumber: "E-240516-001",
+            direction: "eingang",
+            channel: "funk",
+            priority: "sofort",
+            status: "weitergeleitet",
+            messageTime: "2026-05-16T11:45:00.000Z",
+            recordedAt: "2026-05-16T11:47:00.000Z",
+            senderLabel: "Abschnitt Nord",
+            recipientLabel: "Stabsraum S2/S3",
+            subject: "Evakuierung vorbereiten",
+            body: "Winddreher nach Ost.",
+            assignee: "S3 Einsatz",
+            distribution: "s2, s4",
+            notes: "Quittierung ausstehend.",
+            createdAt: "2026-05-16T11:47:00.000Z",
+            createdBy: "System Admin",
+            updatedAt: "2026-05-16T12:10:00.000Z",
+            updatedBy: "KGS Nachrichtenzentrale",
+            dispatches: []
+          };
+        }
+      } as Response;
+    }
+  });
+
+  assert.deepEqual(request, {
+    url: "https://example.test/api/incidents/incident-001/messages/message-001/dispatches",
+    method: "POST",
+    authorization: "Bearer session-user-kgs",
+    body: JSON.stringify({
+      targetRoles: ["s2", "s4"],
+      note: "Bitte auswerten."
+    })
+  });
+});
+
+test("acknowledgeMessageDispatch patches one dispatch receipt", async () => {
+  let request: { url: string; method?: string; authorization?: string } | null = null;
+
+  await acknowledgeMessageDispatch({
+    baseUrl: "https://example.test",
+    incidentId: "incident-001",
+    messageId: "message-001",
+    dispatchId: "dispatch-001",
+    token: "session-user-s2",
+    fetchImpl: async (input, init) => {
+      request = {
+        url: String(input),
+        method: init?.method,
+        authorization: String((init?.headers as Record<string, string>)?.authorization)
+      };
+
+      return {
+        ok: true,
+        async json() {
+          return {
+            id: "message-001",
+            incidentId: "incident-001",
+            trackingNumber: "E-240516-001",
+            direction: "eingang",
+            channel: "funk",
+            priority: "sofort",
+            status: "weitergeleitet",
+            messageTime: "2026-05-16T11:45:00.000Z",
+            recordedAt: "2026-05-16T11:47:00.000Z",
+            senderLabel: "Abschnitt Nord",
+            recipientLabel: "Stabsraum S2/S3",
+            subject: "Evakuierung vorbereiten",
+            body: "Winddreher nach Ost.",
+            assignee: "S3 Einsatz",
+            distribution: "s2, s4",
+            notes: "Quittierung ausstehend.",
+            createdAt: "2026-05-16T11:47:00.000Z",
+            createdBy: "System Admin",
+            updatedAt: "2026-05-16T12:11:00.000Z",
+            updatedBy: "S2 Lage",
+            dispatches: []
+          };
+        }
+      } as Response;
+    }
+  });
+
+  assert.deepEqual(request, {
+    url: "https://example.test/api/incidents/incident-001/messages/message-001/dispatches/dispatch-001/acknowledge",
+    method: "PATCH",
+    authorization: "Bearer session-user-s2"
+  });
+});
+
+test("listJournalEntries reads the incident journal", async () => {
+  const entries = await listJournalEntries({
+    baseUrl: "https://example.test",
+    incidentId: "incident-001",
+    token: "session-user-s2",
+    fetchImpl: async () =>
+      ({
+        ok: true,
+        async json() {
+          return [
+            {
+              id: "journal-001",
+              incidentId: "incident-001",
+              title: "Nachricht uebernommen",
+              body: "Wird im Tagebuch gefuehrt.",
+              createdAt: "2026-05-16T12:12:00.000Z",
+              createdBy: "S2 Lage",
+              sourceMessageId: "message-001"
+            }
+          ];
+        }
+      }) as Response
+  });
+
+  assert.equal(entries[0]?.sourceMessageId, "message-001");
+});
+
+test("createJournalEntry posts a deliberate message transfer", async () => {
+  let request:
+    | { url: string; method?: string; authorization?: string; body?: string }
+    | null = null;
+
+  const entry = await createJournalEntry({
+    baseUrl: "https://example.test",
+    incidentId: "incident-001",
+    sourceMessageId: "message-001",
+    token: "session-user-s2",
+    input: {
+      title: "Nachricht uebernommen",
+      body: "Winddreher im Tagebuch dokumentiert."
+    },
+    fetchImpl: async (input, init) => {
+      request = {
+        url: String(input),
+        method: init?.method,
+        authorization: String((init?.headers as Record<string, string>)?.authorization),
+        body: String(init?.body)
+      };
+
+      return {
+        ok: true,
+        async json() {
+          return {
+            id: "journal-001",
+            incidentId: "incident-001",
+            title: "Nachricht uebernommen",
+            body: "Winddreher im Tagebuch dokumentiert.",
+            createdAt: "2026-05-16T12:12:00.000Z",
+            createdBy: "S2 Lage",
+            sourceMessageId: "message-001"
+          };
+        }
+      } as Response;
+    }
+  });
+
+  assert.equal(entry.sourceMessageId, "message-001");
+  assert.deepEqual(request, {
+    url: "https://example.test/api/incidents/incident-001/messages/message-001/journal-entries",
+    method: "POST",
+    authorization: "Bearer session-user-s2",
+    body: JSON.stringify({
+      title: "Nachricht uebernommen",
+      body: "Winddreher im Tagebuch dokumentiert."
+    })
+  });
 });

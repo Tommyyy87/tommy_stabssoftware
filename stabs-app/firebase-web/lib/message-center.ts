@@ -1,6 +1,12 @@
 export type MessageDirection = "eingang" | "ausgang";
 
-export type MessagePriority = "niedrig" | "normal" | "hoch" | "sofort";
+export type MessagePriority =
+  | "niedrig"
+  | "normal"
+  | "hoch"
+  | "sofort"
+  | "blitz"
+  | "staatsnot";
 
 export type MessageStatus =
   | "neu"
@@ -64,6 +70,8 @@ export const messageStatuses: Array<MessageStatus | "alle"> = [
 
 export const messagePriorities: Array<MessagePriority | "alle"> = [
   "alle",
+  "staatsnot",
+  "blitz",
   "sofort",
   "hoch",
   "normal",
@@ -230,9 +238,24 @@ export const demoMessages: MessageRecord[] = [
 ];
 
 export function sortMessages(messages: MessageRecord[]) {
-  return [...messages].sort((left, right) =>
-    right.messageTime.localeCompare(left.messageTime)
-  );
+  const priorityRank: Record<MessagePriority, number> = {
+    staatsnot: 6,
+    blitz: 5,
+    sofort: 4,
+    hoch: 3,
+    normal: 2,
+    niedrig: 1
+  };
+
+  return [...messages].sort((left, right) => {
+    const byTime = right.messageTime.localeCompare(left.messageTime);
+
+    if (byTime !== 0) {
+      return byTime;
+    }
+
+    return priorityRank[right.priority] - priorityRank[left.priority];
+  });
 }
 
 export function filterMessages(messages: MessageRecord[], filters: MessageFilters) {
@@ -266,7 +289,9 @@ export function buildStatusSummary(messages: MessageRecord[]) {
   return {
     total: messages.length,
     newCount: messages.filter((message) => message.status === "neu").length,
-    urgentCount: messages.filter((message) => message.priority === "sofort").length,
+    urgentCount: messages.filter((message) =>
+      ["sofort", "blitz", "staatsnot"].includes(message.priority)
+    ).length,
     outgoingCount: messages.filter((message) => message.direction === "ausgang").length
   };
 }
@@ -281,7 +306,14 @@ export function getMessageStatusLabel(status: MessageStatus | "alle") {
 }
 
 export function getMessagePriorityLabel(priority: MessagePriority | "alle") {
-  return priority;
+  switch (priority) {
+    case "staatsnot":
+      return "Staatsnot";
+    case "blitz":
+      return "Blitz";
+    default:
+      return priority;
+  }
 }
 
 export function getMessageDirectionLabel(direction: MessageDirection | "alle") {

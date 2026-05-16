@@ -139,7 +139,7 @@ export class PrismaIncidentsStore implements IncidentStore, OnModuleInit {
       ]
     });
 
-    return entries.map((entry) => ({
+    return entries.map((entry: (typeof entries)[number]) => ({
       id: entry.id,
       incidentId: entry.incidentId,
       action: entry.action,

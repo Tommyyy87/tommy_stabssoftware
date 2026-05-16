@@ -52,6 +52,10 @@ const roleDefinitions: RoleDefinition[] = [
       "messages.read",
       "messages.create",
       "messages.update",
+      "messages.dispatch",
+      "messages.acknowledge",
+      "journal.read",
+      "journal.create",
       "roles.read",
       "audit.read"
     ]
@@ -66,6 +70,10 @@ const roleDefinitions: RoleDefinition[] = [
       "messages.read",
       "messages.create",
       "messages.update",
+      "messages.dispatch",
+      "messages.acknowledge",
+      "journal.read",
+      "journal.create",
       "roles.read",
       "audit.read"
     ]
@@ -73,28 +81,79 @@ const roleDefinitions: RoleDefinition[] = [
   {
     key: "stabsleitung",
     displayName: "Stabsleitung",
-    permissions: ["incidents.read", "messages.read", "audit.read"]
+    permissions: [
+      "incidents.read",
+      "messages.read",
+      "messages.acknowledge",
+      "journal.read",
+      "audit.read"
+    ]
   },
   {
     key: "kgs",
     displayName: "KGS",
-    permissions: ["incidents.read", "messages.read", "messages.create", "messages.update"]
+    permissions: [
+      "incidents.read",
+      "messages.read",
+      "messages.create",
+      "messages.update",
+      "messages.dispatch",
+      "messages.acknowledge",
+      "journal.read",
+      "journal.create"
+    ]
   },
-  { key: "s1", displayName: "S1", permissions: ["incidents.read", "messages.read"] },
+  {
+    key: "s1",
+    displayName: "S1",
+    permissions: ["incidents.read", "messages.read", "messages.acknowledge", "journal.read"]
+  },
   {
     key: "s2",
     displayName: "S2",
-    permissions: ["incidents.read", "messages.read", "messages.create", "messages.update"]
+    permissions: [
+      "incidents.read",
+      "messages.read",
+      "messages.create",
+      "messages.update",
+      "messages.acknowledge",
+      "journal.read",
+      "journal.create"
+    ]
   },
   {
     key: "s3",
     displayName: "S3",
-    permissions: ["incidents.read", "messages.read", "messages.create", "messages.update"]
+    permissions: [
+      "incidents.read",
+      "messages.read",
+      "messages.create",
+      "messages.update",
+      "messages.acknowledge",
+      "journal.read",
+      "journal.create"
+    ]
   },
-  { key: "s4", displayName: "S4", permissions: ["incidents.read", "messages.read"] },
-  { key: "s5", displayName: "S5", permissions: ["incidents.read", "messages.read"] },
-  { key: "s6", displayName: "S6", permissions: ["incidents.read", "messages.read"] },
-  { key: "reader", displayName: "Leser", permissions: ["incidents.read", "messages.read"] }
+  {
+    key: "s4",
+    displayName: "S4",
+    permissions: ["incidents.read", "messages.read", "messages.acknowledge", "journal.read"]
+  },
+  {
+    key: "s5",
+    displayName: "S5",
+    permissions: ["incidents.read", "messages.read", "messages.acknowledge", "journal.read"]
+  },
+  {
+    key: "s6",
+    displayName: "S6",
+    permissions: ["incidents.read", "messages.read", "messages.acknowledge", "journal.read"]
+  },
+  {
+    key: "reader",
+    displayName: "Leser",
+    permissions: ["incidents.read", "messages.read", "journal.read"]
+  }
 ];
 
 const seededAuthUsers: SeededAuthUser[] = [
@@ -113,6 +172,54 @@ const seededAuthUsers: SeededAuthUser[] = [
     password: "demo",
     passwordSalt: "seed-s2-demo",
     roles: ["s2", "reader"]
+  },
+  {
+    id: "user-kgs",
+    username: "kgs",
+    displayName: "KGS Nachrichtenzentrale",
+    password: "demo",
+    passwordSalt: "seed-kgs-demo",
+    roles: ["kgs", "reader"]
+  },
+  {
+    id: "user-s1",
+    username: "s1",
+    displayName: "S1 Personal",
+    password: "demo",
+    passwordSalt: "seed-s1-demo",
+    roles: ["s1", "reader"]
+  },
+  {
+    id: "user-s3",
+    username: "s3",
+    displayName: "S3 Einsatz",
+    password: "demo",
+    passwordSalt: "seed-s3-demo",
+    roles: ["s3", "reader"]
+  },
+  {
+    id: "user-s4",
+    username: "s4",
+    displayName: "S4 Versorgung",
+    password: "demo",
+    passwordSalt: "seed-s4-demo",
+    roles: ["s4", "reader"]
+  },
+  {
+    id: "user-s5",
+    username: "s5",
+    displayName: "S5 Oeffentlichkeitsarbeit",
+    password: "demo",
+    passwordSalt: "seed-s5-demo",
+    roles: ["s5", "reader"]
+  },
+  {
+    id: "user-s6",
+    username: "s6",
+    displayName: "S6 Kommunikation",
+    password: "demo",
+    passwordSalt: "seed-s6-demo",
+    roles: ["s6", "reader"]
   }
 ];
 

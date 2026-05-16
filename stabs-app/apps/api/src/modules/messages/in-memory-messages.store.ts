@@ -1,6 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import {
+  acknowledgeMessageDispatch,
   createMessage,
+  dispatchMessage,
   getMessageHistory,
   listMessagesByIncident,
   resolveUserDisplayName,
@@ -8,6 +10,7 @@ import {
 } from "../../shared/demo-store";
 import {
   CreateMessageInput,
+  DispatchMessageInput,
   MessageHistoryEntry,
   MessageStore,
   MessageSummary,
@@ -53,6 +56,54 @@ export class InMemoryMessagesStore implements MessageStore {
     updatedByUserId: string
   ): Promise<MessageSummary | null> {
     const message = updateMessage(incidentId, messageId, input, updatedByUserId);
+
+    if (!message) {
+      return null;
+    }
+
+    return {
+      ...message,
+      createdBy: resolveUserDisplayName(message.createdBy),
+      updatedBy: resolveUserDisplayName(message.updatedBy)
+    };
+  }
+
+  async dispatch(
+    incidentId: string,
+    messageId: string,
+    input: DispatchMessageInput,
+    dispatchedByUserId: string
+  ): Promise<MessageSummary | null> {
+    const message = dispatchMessage(
+      incidentId,
+      messageId,
+      input,
+      dispatchedByUserId
+    );
+
+    if (!message) {
+      return null;
+    }
+
+    return {
+      ...message,
+      createdBy: resolveUserDisplayName(message.createdBy),
+      updatedBy: resolveUserDisplayName(message.updatedBy)
+    };
+  }
+
+  async acknowledgeDispatch(
+    incidentId: string,
+    messageId: string,
+    dispatchId: string,
+    acknowledgedByUserId: string
+  ): Promise<MessageSummary | null> {
+    const message = acknowledgeMessageDispatch(
+      incidentId,
+      messageId,
+      dispatchId,
+      acknowledgedByUserId
+    );
 
     if (!message) {
       return null;

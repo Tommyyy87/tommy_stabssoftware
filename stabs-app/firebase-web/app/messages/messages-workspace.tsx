@@ -2,8 +2,11 @@
 
 import { FormEvent, useEffect, useMemo, useState, useTransition } from "react";
 import {
+  acknowledgeMessageDispatch,
   AuthSession,
+  createJournalEntry,
   createMessage,
+  dispatchMessage,
   getMessageHistory,
   IncidentSnapshot,
   listMessages,
@@ -43,6 +46,7 @@ type MessageFilters = {
   status: MessageSnapshot["status"] | "alle";
   priority: MessageSnapshot["priority"] | "alle";
   direction: MessageSnapshot["direction"] | "alle";
+  scope: "mein_eingang" | "alle";
 };
 
 type MessageHistoryState = {
@@ -116,7 +120,8 @@ export function MessagesWorkspace({
     query: "",
     status: "alle",
     priority: "alle",
-    direction: "alle"
+    direction: "alle",
+    scope: "mein_eingang"
   });
   const [workspaceError, setWorkspaceError] = useState<string | null>(
     backendReachable ? null : "Backend aktuell nicht erreichbar."
@@ -128,7 +133,18 @@ export function MessagesWorkspace({
   const canRead = permissions.includes("messages.read");
   const canCreate = permissions.includes("messages.create");
   const canUpdate = permissions.includes("messages.update");
+  const canDispatch = permissions.includes("messages.dispatch");
+  const canAcknowledge = permissions.includes("messages.acknowledge");
+  const canCreateJournal = permissions.includes("journal.create");
   const canReadHistory = permissions.includes("audit.read") || canRead;
+  const currentRoles = authState.currentUser?.user.roles ?? [];
+  const myInboxCount = messages.filter((message) =>
+    message.dispatches.some(
+      (dispatch) =>
+        currentRoles.includes(dispatch.targetRole) &&
+        dispatch.processingStatus !== "quittiert"
+    )
+  ).length;
 
   const visibleMessages = useMemo(() => {
     const needle = filters.query.trim().toLowerCase();
@@ -153,11 +169,22 @@ export function MessagesWorkspace({
             .join(" ")
             .toLowerCase()
             .includes(needle);
+        const matchesScope =
+          filters.scope === "alle" ||
+          message.dispatches.some((dispatch) =>
+            currentRoles.includes(dispatch.targetRole)
+          );
 
-        return matchesStatus && matchesPriority && matchesDirection && matchesQuery;
+        return (
+          matchesStatus &&
+          matchesPriority &&
+          matchesDirection &&
+          matchesQuery &&
+          matchesScope
+        );
       })
       .sort((left, right) => right.messageTime.localeCompare(left.messageTime));
-  }, [filters, messages]);
+  }, [currentRoles, filters, messages]);
 
   const selectedMessage =
     visibleMessages.find((message) => message.id === selectedMessageId) ??
@@ -341,6 +368,94 @@ export function MessagesWorkspace({
           return next;
         });
         setFeedback(`Nachricht ${updated.trackingNumber} wurde aktualisiert.`);
+      });
+    } catch (error) {
+      startTransition(() => {
+        setFeedback(getErrorMessage(error));
+      });
+    }
+  }
+
+  async function handleDispatchMessage(messageId: string, targetRoles: string[]) {
+    if (!authState.session || !selectedIncidentId) {
+      return;
+    }
+
+    try {
+      const updated = await dispatchMessage({
+        baseUrl,
+        incidentId: selectedIncidentId,
+        messageId,
+        token: authState.session.token,
+        input: {
+          targetRoles,
+          note: "Durch Sichter weitergegeben."
+        }
+      });
+
+      startTransition(() => {
+        setMessages((current) =>
+          current.map((message) => (message.id === updated.id ? updated : message))
+        );
+        setFeedback(
+          `Nachricht ${updated.trackingNumber} an ${targetRoles
+            .map((role) => role.toUpperCase())
+            .join(", ")} verteilt.`
+        );
+      });
+    } catch (error) {
+      startTransition(() => {
+        setFeedback(getErrorMessage(error));
+      });
+    }
+  }
+
+  async function handleAcknowledgeDispatch(messageId: string, dispatchId: string) {
+    if (!authState.session || !selectedIncidentId) {
+      return;
+    }
+
+    try {
+      const updated = await acknowledgeMessageDispatch({
+        baseUrl,
+        incidentId: selectedIncidentId,
+        messageId,
+        dispatchId,
+        token: authState.session.token
+      });
+
+      startTransition(() => {
+        setMessages((current) =>
+          current.map((message) => (message.id === updated.id ? updated : message))
+        );
+        setFeedback(`Zustellung fuer ${updated.trackingNumber} quittiert.`);
+      });
+    } catch (error) {
+      startTransition(() => {
+        setFeedback(getErrorMessage(error));
+      });
+    }
+  }
+
+  async function handleCreateJournalEntry(message: MessageSnapshot) {
+    if (!authState.session || !selectedIncidentId) {
+      return;
+    }
+
+    try {
+      await createJournalEntry({
+        baseUrl,
+        incidentId: selectedIncidentId,
+        sourceMessageId: message.id,
+        token: authState.session.token,
+        input: {
+          title: `${message.trackingNumber} ins Tagebuch uebernommen`,
+          body: `${message.subject}\n\n${message.body}`
+        }
+      });
+
+      startTransition(() => {
+        setFeedback(`Nachricht ${message.trackingNumber} bewusst ins Tagebuch uebernommen.`);
       });
     } catch (error) {
       startTransition(() => {
@@ -534,6 +649,9 @@ export function MessagesWorkspace({
             <p className="muted-text">
               Nachrichten werden pro Lage getrennt geladen und bearbeitet.
             </p>
+            <p className="muted-text">
+              Mein Eingang offen: <strong>{myInboxCount}</strong>
+            </p>
           </div>
         </div>
 
@@ -553,6 +671,22 @@ export function MessagesWorkspace({
             </div>
 
             <div className="toolbar-filters">
+              <label className="field compact-field">
+                <span>Ansicht</span>
+                <select
+                  onChange={(event) =>
+                    setFilters((current) => ({
+                      ...current,
+                      scope: event.target.value as MessageFilters["scope"]
+                    }))
+                  }
+                  value={filters.scope}
+                >
+                  <option value="mein_eingang">mein Eingang</option>
+                  <option value="alle">alle Nachrichten</option>
+                </select>
+              </label>
+
               <label className="field compact-field">
                 <span>Status</span>
                 <select
@@ -679,6 +813,8 @@ export function MessagesWorkspace({
                     }
                     value={composer.priority}
                   >
+                    <option value="staatsnot">Staatsnot</option>
+                    <option value="blitz">Blitz</option>
                     <option value="sofort">sofort</option>
                     <option value="hoch">hoch</option>
                     <option value="normal">normal</option>
@@ -798,6 +934,12 @@ export function MessagesWorkspace({
                     <p className="message-item-meta">
                       {formatDate(message.messageTime)} · {message.channel}
                     </p>
+                    {message.dispatches.length > 0 ? (
+                      <p className="message-item-meta">
+                        Rollenpostfaecher:{" "}
+                        {message.dispatches.map((dispatch) => dispatch.targetRole.toUpperCase()).join(", ")}
+                      </p>
+                    ) : null}
                   </button>
                 ))}
               </div>
@@ -871,6 +1013,74 @@ export function MessagesWorkspace({
                         <strong>Vermerk:</strong> {selectedMessage.notes || "kein Vermerk"}
                       </p>
                     </article>
+                    <article className="detail-card">
+                      <div className="message-section-header">
+                        <h4>Rollenpostfaecher</h4>
+                        {canDispatch ? (
+                          <button
+                            className="ghost-button"
+                            onClick={() =>
+                              void handleDispatchMessage(selectedMessage.id, ["s2", "s4"])
+                            }
+                            type="button"
+                          >
+                            An S2 + S4 weitergeben
+                          </button>
+                        ) : null}
+                      </div>
+                      {selectedMessage.dispatches.length > 0 ? (
+                        <div className="dispatch-list">
+                          {selectedMessage.dispatches.map((dispatch) => {
+                            const isMine = currentRoles.includes(dispatch.targetRole);
+                            const canAcknowledgeDispatch =
+                              canAcknowledge &&
+                              isMine &&
+                              dispatch.processingStatus !== "quittiert";
+
+                            return (
+                              <article className="dispatch-card" key={dispatch.id}>
+                                <div className="dispatch-head">
+                                  <strong>{dispatch.targetRole.toUpperCase()}</strong>
+                                  <span className={`status-pill status-${selectedMessage.status}`}>
+                                    {dispatch.processingStatus}
+                                  </span>
+                                </div>
+                                <p className="muted-text">
+                                  Weitergabe: {formatDate(dispatch.dispatchedAt)} · {dispatch.dispatchedBy}
+                                </p>
+                                <p className="muted-text">
+                                  {dispatch.dispatchNote || "ohne Zusatzvermerk"}
+                                </p>
+                                <p className="muted-text">
+                                  Quittiert:{" "}
+                                  {dispatch.acknowledgedAt && dispatch.acknowledgedBy
+                                    ? `${formatDate(dispatch.acknowledgedAt)} · ${dispatch.acknowledgedBy}`
+                                    : "offen"}
+                                </p>
+                                {canAcknowledgeDispatch ? (
+                                  <button
+                                    className="primary-button"
+                                    onClick={() =>
+                                      void handleAcknowledgeDispatch(
+                                        selectedMessage.id,
+                                        dispatch.id
+                                      )
+                                    }
+                                    type="button"
+                                  >
+                                    Eingang quittieren
+                                  </button>
+                                ) : null}
+                              </article>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="muted-text">
+                          Noch keine Rollenpostfaecher zugewiesen.
+                        </p>
+                      )}
+                    </article>
                   </div>
 
                   {canUpdate ? (
@@ -916,6 +1126,17 @@ export function MessagesWorkspace({
                             </select>
                           </label>
                         </div>
+                        {canCreateJournal ? (
+                          <div className="button-row">
+                            <button
+                              className="primary-button"
+                              onClick={() => void handleCreateJournalEntry(selectedMessage)}
+                              type="button"
+                            >
+                              Ins Tagebuch uebernehmen
+                            </button>
+                          </div>
+                        ) : null}
                       </article>
 
                       <article className="detail-card">

@@ -8,6 +8,7 @@ import {
 import { AuthService } from "../auth/auth.service";
 import {
   CreateMessageInput,
+  DispatchMessageInput,
   MESSAGE_STORE,
   MessageChannel,
   MessagePriority,
@@ -28,7 +29,9 @@ const validPriorities = new Set<MessagePriority>([
   "niedrig",
   "normal",
   "hoch",
-  "sofort"
+  "sofort",
+  "blitz",
+  "staatsnot"
 ]);
 
 const validStatuses = new Set<MessageStatus>([
@@ -190,6 +193,71 @@ export class MessagesService {
 
     if (!updated) {
       throw new NotFoundException("Nachricht nicht gefunden.");
+    }
+
+    return updated;
+  }
+
+  async dispatch(
+    incidentId: string,
+    messageId: string,
+    input: DispatchMessageInput,
+    authorizationHeader: string | undefined
+  ) {
+    const session =
+      await this.authService.getPermissionsForCurrentUser(authorizationHeader);
+
+    if (!session.permissions.includes("messages.dispatch")) {
+      throw new ForbiddenException("Keine Berechtigung zum Verteilen von Nachrichten.");
+    }
+
+    const targetRoles = input.targetRoles.filter((role, index, roles) =>
+      roles.indexOf(role) === index
+    );
+
+    if (targetRoles.length === 0) {
+      throw new BadRequestException("Mindestens eine Zielrolle ist erforderlich.");
+    }
+
+    const updated = await this.messageStore.dispatch(
+      incidentId,
+      messageId,
+      {
+        targetRoles,
+        note: this.optionalText(input.note) || ""
+      },
+      session.user.id
+    );
+
+    if (!updated) {
+      throw new NotFoundException("Nachricht nicht gefunden.");
+    }
+
+    return updated;
+  }
+
+  async acknowledgeDispatch(
+    incidentId: string,
+    messageId: string,
+    dispatchId: string,
+    authorizationHeader: string | undefined
+  ) {
+    const session =
+      await this.authService.getPermissionsForCurrentUser(authorizationHeader);
+
+    if (!session.permissions.includes("messages.acknowledge")) {
+      throw new ForbiddenException("Keine Berechtigung zum Quittieren von Nachrichten.");
+    }
+
+    const updated = await this.messageStore.acknowledgeDispatch(
+      incidentId,
+      messageId,
+      dispatchId,
+      session.user.id
+    );
+
+    if (!updated) {
+      throw new NotFoundException("Nachricht oder Zustellung nicht gefunden.");
     }
 
     return updated;

@@ -1,10 +1,14 @@
+import { JournalEntrySummary } from "../modules/journal/journal.store";
 import { IncidentHistoryEntry } from "../modules/incidents/incidents.store";
 import {
   CreateMessageInput,
+  DispatchMessageInput,
+  MessageDispatchSummary,
   MessageHistoryEntry,
   MessageSummary,
   UpdateMessageInput
 } from "../modules/messages/messages.store";
+import { AppRole } from "./auth-config";
 
 type StoredIncident = {
   id: string;
@@ -30,7 +34,13 @@ const now = new Date().toISOString();
 
 const displayNames = new Map<string, string>([
   ["user-admin", "System Admin"],
-  ["user-s2", "S2 Lage"]
+  ["user-kgs", "KGS Nachrichtenzentrale"],
+  ["user-s1", "S1 Personal"],
+  ["user-s2", "S2 Lage"],
+  ["user-s3", "S3 Einsatz"],
+  ["user-s4", "S4 Versorgung"],
+  ["user-s5", "S5 Oeffentlichkeitsarbeit"],
+  ["user-s6", "S6 Kommunikation"]
 ]);
 
 const seededIncidents: StoredIncident[] = [
@@ -72,6 +82,14 @@ type StoredMessage = Omit<MessageSummary, "createdBy" | "updatedBy"> & {
   updatedBy: string;
 };
 
+type StoredDispatch = Omit<
+  MessageDispatchSummary,
+  "dispatchedBy" | "acknowledgedBy"
+> & {
+  dispatchedBy: string;
+  acknowledgedBy: string | null;
+};
+
 const seededMessages: StoredMessage[] = [
   {
     id: "message-001",
@@ -93,11 +111,62 @@ const seededMessages: StoredMessage[] = [
     createdAt: now,
     createdBy: "user-admin",
     updatedAt: now,
-    updatedBy: "user-admin"
+    updatedBy: "user-admin",
+    dispatches: []
   }
 ];
 
 const messages: StoredMessage[] = seededMessages.map((message) => ({ ...message }));
+const messageDispatches = new Map<string, StoredDispatch[]>();
+const journalEntries: JournalEntrySummary[] = [];
+
+const seededDispatches: StoredDispatch[] = [
+  {
+    id: "dispatch-001",
+    incidentId: "incident-001",
+    messageId: "message-001",
+    targetRole: "kgs",
+    dispatchedAt: now,
+    dispatchedBy: "user-admin",
+    dispatchNote: "Bitte sichten und weitergeben.",
+    seenAt: now,
+    acknowledgedAt: now,
+    acknowledgedBy: "user-kgs",
+    processingStatus: "quittiert"
+  },
+  {
+    id: "dispatch-002",
+    incidentId: "incident-001",
+    messageId: "message-001",
+    targetRole: "s2",
+    dispatchedAt: now,
+    dispatchedBy: "user-admin",
+    dispatchNote: "Lagebewertung erforderlich.",
+    seenAt: null,
+    acknowledgedAt: null,
+    acknowledgedBy: null,
+    processingStatus: "neu"
+  },
+  {
+    id: "dispatch-003",
+    incidentId: "incident-001",
+    messageId: "message-001",
+    targetRole: "s4",
+    dispatchedAt: now,
+    dispatchedBy: "user-admin",
+    dispatchNote: "Versorgungsauswirkungen pruefen.",
+    seenAt: null,
+    acknowledgedAt: null,
+    acknowledgedBy: null,
+    processingStatus: "neu"
+  }
+];
+
+for (const dispatch of seededDispatches) {
+  const current = messageDispatches.get(dispatch.messageId) ?? [];
+  current.push(dispatch);
+  messageDispatches.set(dispatch.messageId, current);
+}
 
 const messageHistory = new Map<string, MessageHistoryEntry[]>(
   seededMessages.map((message) => [
@@ -130,7 +199,10 @@ export function getSeededIncidents() {
 }
 
 export function getSeededMessagesForIncidents() {
-  return seededMessages.map((message) => ({ ...message }));
+  return seededMessages.map((message) => ({
+    ...message,
+    dispatches: (messageDispatches.get(message.id) ?? []).map((dispatch) => ({ ...dispatch }))
+  }));
 }
 
 export function listIncidents() {
@@ -140,7 +212,11 @@ export function listIncidents() {
 export function listMessagesByIncident(incidentId: string) {
   return messages
     .filter((message) => message.incidentId === incidentId)
-    .sort((left, right) => right.messageTime.localeCompare(left.messageTime));
+    .sort((left, right) => right.messageTime.localeCompare(left.messageTime))
+    .map((message) => ({
+      ...message,
+      dispatches: mapDispatchesForMessage(message.id)
+    }));
 }
 
 export function getIncidentHistory(incidentId: string) {
@@ -293,7 +369,8 @@ export function createMessage(
     createdAt,
     createdBy,
     updatedAt: createdAt,
-    updatedBy: createdBy
+    updatedBy: createdBy,
+    dispatches: []
   };
 
   messages.unshift(message);
@@ -314,7 +391,10 @@ export function createMessage(
     }
   ]);
 
-  return message;
+  return {
+    ...message,
+    dispatches: mapDispatchesForMessage(message.id)
+  };
 }
 
 export function updateMessage(
@@ -421,5 +501,199 @@ export function updateMessage(
     messageHistory.set(message.id, history);
   }
 
-  return message;
+  return {
+    ...message,
+    dispatches: mapDispatchesForMessage(message.id)
+  };
+}
+
+export function dispatchMessage(
+  incidentId: string,
+  messageId: string,
+  input: DispatchMessageInput,
+  dispatchedBy: string
+) {
+  const message = messages.find(
+    (entry) => entry.id === messageId && entry.incidentId === incidentId
+  );
+
+  if (!message) {
+    return null;
+  }
+
+  const current = messageDispatches.get(messageId) ?? [];
+  const nowTimestamp = new Date().toISOString();
+
+  for (const targetRole of input.targetRoles) {
+    const existing = current.find((dispatch) => dispatch.targetRole === targetRole);
+
+    if (existing) {
+      existing.dispatchNote = input.note?.trim() || existing.dispatchNote;
+      existing.dispatchedAt = nowTimestamp;
+      existing.dispatchedBy = dispatchedBy;
+      existing.processingStatus = existing.acknowledgedAt ? "quittiert" : "neu";
+      existing.seenAt = null;
+      existing.acknowledgedAt = null;
+      existing.acknowledgedBy = null;
+      continue;
+    }
+
+    current.push({
+      id: `dispatch-${String(current.length + 1).padStart(3, "0")}-${messageId}`,
+      incidentId,
+      messageId,
+      targetRole,
+      dispatchedAt: nowTimestamp,
+      dispatchedBy,
+      dispatchNote: input.note?.trim() || "",
+      seenAt: null,
+      acknowledgedAt: null,
+      acknowledgedBy: null,
+      processingStatus: "neu"
+    });
+  }
+
+  messageDispatches.set(messageId, current);
+  message.updatedAt = nowTimestamp;
+  message.updatedBy = dispatchedBy;
+  message.status = "weitergeleitet";
+  message.distribution = input.targetRoles.map(toRoleLabel).join(", ");
+
+  const history = messageHistory.get(message.id) ?? [];
+  history.unshift({
+    id: `message-audit-${message.id}-${history.length + 1}`,
+    messageId: message.id,
+    incidentId,
+    action: "updated",
+    summary: `Nachricht verteilt an ${input.targetRoles.map(toRoleLabel).join(", ")}.`,
+    createdAt: nowTimestamp,
+    actor: resolveUserDisplayName(dispatchedBy),
+    changes: [
+      {
+        field: "distribution",
+        from: null,
+        to: input.targetRoles.map(toRoleLabel).join(", ")
+      },
+      {
+        field: "status",
+        from: "neu",
+        to: "weitergeleitet"
+      }
+    ]
+  });
+  messageHistory.set(message.id, history);
+
+  return {
+    ...message,
+    dispatches: mapDispatchesForMessage(message.id)
+  };
+}
+
+export function acknowledgeMessageDispatch(
+  incidentId: string,
+  messageId: string,
+  dispatchId: string,
+  acknowledgedBy: string
+) {
+  const message = messages.find(
+    (entry) => entry.id === messageId && entry.incidentId === incidentId
+  );
+
+  if (!message) {
+    return null;
+  }
+
+  const dispatch = (messageDispatches.get(messageId) ?? []).find(
+    (entry) => entry.id === dispatchId
+  );
+
+  if (!dispatch) {
+    return null;
+  }
+
+  const nowTimestamp = new Date().toISOString();
+  dispatch.seenAt = dispatch.seenAt ?? nowTimestamp;
+  dispatch.acknowledgedAt = nowTimestamp;
+  dispatch.acknowledgedBy = acknowledgedBy;
+  dispatch.processingStatus = "quittiert";
+  message.updatedAt = nowTimestamp;
+  message.updatedBy = acknowledgedBy;
+
+  const history = messageHistory.get(message.id) ?? [];
+  history.unshift({
+    id: `message-audit-${message.id}-${history.length + 1}`,
+    messageId: message.id,
+    incidentId,
+    action: "updated",
+    summary: `${toRoleLabel(dispatch.targetRole)} hat den Eingang quittiert.`,
+    createdAt: nowTimestamp,
+    actor: resolveUserDisplayName(acknowledgedBy),
+    changes: [
+      {
+        field: "notes",
+        from: null,
+        to: `${toRoleLabel(dispatch.targetRole)} quittiert`
+      }
+    ]
+  });
+  messageHistory.set(message.id, history);
+
+  return {
+    ...message,
+    dispatches: mapDispatchesForMessage(message.id)
+  };
+}
+
+export function listJournalEntriesByIncident(incidentId: string) {
+  return journalEntries
+    .filter((entry) => entry.incidentId === incidentId)
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+}
+
+export function createJournalEntry(
+  incidentId: string,
+  input: { title: string; body: string },
+  createdBy: string,
+  sourceMessageId: string | null = null
+) {
+  const entry: JournalEntrySummary = {
+    id: `journal-${String(journalEntries.length + 1).padStart(3, "0")}`,
+    incidentId,
+    title: input.title.trim(),
+    body: input.body.trim(),
+    createdAt: new Date().toISOString(),
+    createdBy: resolveUserDisplayName(createdBy),
+    sourceMessageId
+  };
+
+  journalEntries.unshift(entry);
+  return entry;
+}
+
+function mapDispatchesForMessage(messageId: string): MessageDispatchSummary[] {
+  return (messageDispatches.get(messageId) ?? []).map((dispatch) => ({
+    ...dispatch,
+    dispatchedBy: resolveUserDisplayName(dispatch.dispatchedBy),
+    acknowledgedBy: dispatch.acknowledgedBy
+      ? resolveUserDisplayName(dispatch.acknowledgedBy)
+      : null
+  }));
+}
+
+function toRoleLabel(role: AppRole) {
+  const labels: Record<AppRole, string> = {
+    system_admin: "Systemadministrator",
+    lageleiter: "Lageleiter",
+    stabsleitung: "Stabsleitung",
+    kgs: "KGS",
+    s1: "S1",
+    s2: "S2",
+    s3: "S3",
+    s4: "S4",
+    s5: "S5",
+    s6: "S6",
+    reader: "Leser"
+  };
+
+  return labels[role];
 }

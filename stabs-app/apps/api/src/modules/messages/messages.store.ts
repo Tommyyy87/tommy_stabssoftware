@@ -1,3 +1,5 @@
+import { AppRole } from "../../shared/auth-config";
+
 export type MessageDirection = "eingang" | "ausgang";
 
 export type MessageChannel =
@@ -7,7 +9,13 @@ export type MessageChannel =
   | "melder"
   | "lagekontakt";
 
-export type MessagePriority = "niedrig" | "normal" | "hoch" | "sofort";
+export type MessagePriority =
+  | "niedrig"
+  | "normal"
+  | "hoch"
+  | "sofort"
+  | "blitz"
+  | "staatsnot";
 
 export type MessageStatus =
   | "neu"
@@ -37,6 +45,27 @@ export type MessageSummary = {
   createdBy: string;
   updatedAt: string;
   updatedBy: string;
+  dispatches: MessageDispatchSummary[];
+};
+
+export type MessageDispatchStatus =
+  | "neu"
+  | "gesehen"
+  | "quittiert"
+  | "in_bearbeitung";
+
+export type MessageDispatchSummary = {
+  id: string;
+  messageId: string;
+  incidentId: string;
+  targetRole: AppRole;
+  dispatchedAt: string;
+  dispatchedBy: string;
+  dispatchNote: string;
+  seenAt: string | null;
+  acknowledgedAt: string | null;
+  acknowledgedBy: string | null;
+  processingStatus: MessageDispatchStatus;
 };
 
 export type MessageHistoryChange = {
@@ -95,6 +124,11 @@ export type UpdateMessageInput = {
   notes?: string;
 };
 
+export type DispatchMessageInput = {
+  targetRoles: AppRole[];
+  note?: string;
+};
+
 export interface MessageStore {
   listByIncident(incidentId: string): Promise<MessageSummary[]>;
   listHistory(incidentId: string, messageId: string): Promise<MessageHistoryEntry[] | null>;
@@ -108,6 +142,18 @@ export interface MessageStore {
     messageId: string,
     input: UpdateMessageInput,
     updatedByUserId: string
+  ): Promise<MessageSummary | null>;
+  dispatch(
+    incidentId: string,
+    messageId: string,
+    input: DispatchMessageInput,
+    dispatchedByUserId: string
+  ): Promise<MessageSummary | null>;
+  acknowledgeDispatch(
+    incidentId: string,
+    messageId: string,
+    dispatchId: string,
+    acknowledgedByUserId: string
   ): Promise<MessageSummary | null>;
 }
 

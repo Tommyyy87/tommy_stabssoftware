@@ -10,6 +10,11 @@ import { InMemoryIncidentsStore } from "./modules/incidents/in-memory-incidents.
 import { INCIDENT_STORE } from "./modules/incidents/incidents.store";
 import { PrismaIncidentsStore } from "./modules/incidents/prisma-incidents.store";
 import { IncidentsService } from "./modules/incidents/incidents.service";
+import { JournalController } from "./modules/journal/journal.controller";
+import { InMemoryJournalStore } from "./modules/journal/in-memory-journal.store";
+import { JOURNAL_STORE } from "./modules/journal/journal.store";
+import { JournalService } from "./modules/journal/journal.service";
+import { PrismaJournalStore } from "./modules/journal/prisma-journal.store";
 import { MessagesController } from "./modules/messages/messages.controller";
 import { InMemoryMessagesStore } from "./modules/messages/in-memory-messages.store";
 import { MESSAGE_STORE } from "./modules/messages/messages.store";
@@ -22,17 +27,21 @@ import { PrismaService } from "./prisma/prisma.service";
     HealthController,
     AuthController,
     IncidentsController,
+    JournalController,
     MessagesController
   ],
   providers: [
     AuthService,
     IncidentsService,
+    JournalService,
     MessagesService,
     PrismaService,
     InMemoryAuthStore,
     PrismaAuthStore,
     InMemoryIncidentsStore,
     PrismaIncidentsStore,
+    InMemoryJournalStore,
+    PrismaJournalStore,
     InMemoryMessagesStore,
     PrismaMessagesStore,
     {
@@ -51,6 +60,14 @@ import { PrismaService } from "./prisma/prisma.service";
       ) =>
         process.env.DATABASE_URL ? prismaIncidentsStore : inMemoryIncidentsStore,
       inject: [InMemoryIncidentsStore, PrismaIncidentsStore]
+    },
+    {
+      provide: JOURNAL_STORE,
+      useFactory: (
+        inMemoryJournalStore: InMemoryJournalStore,
+        prismaJournalStore: PrismaJournalStore
+      ) => (process.env.DATABASE_URL ? prismaJournalStore : inMemoryJournalStore),
+      inject: [InMemoryJournalStore, PrismaJournalStore]
     },
     {
       provide: MESSAGE_STORE,

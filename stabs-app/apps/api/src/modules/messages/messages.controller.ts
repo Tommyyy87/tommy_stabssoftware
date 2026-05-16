@@ -1,6 +1,10 @@
 import { Body, Controller, Get, Headers, Param, Patch, Post } from "@nestjs/common";
 import { MessagesService } from "./messages.service";
-import { CreateMessageInput, UpdateMessageInput } from "./messages.store";
+import {
+  CreateMessageInput,
+  DispatchMessageInput,
+  UpdateMessageInput
+} from "./messages.store";
 
 @Controller("incidents/:incidentId/messages")
 export class MessagesController {
@@ -34,6 +38,36 @@ export class MessagesController {
     @Headers("authorization") authorizationHeader?: string
   ) {
     return this.messagesService.create(incidentId, body, authorizationHeader);
+  }
+
+  @Post(":messageId/dispatches")
+  dispatch(
+    @Param("incidentId") incidentId: string,
+    @Param("messageId") messageId: string,
+    @Body() body: DispatchMessageInput,
+    @Headers("authorization") authorizationHeader?: string
+  ) {
+    return this.messagesService.dispatch(
+      incidentId,
+      messageId,
+      body,
+      authorizationHeader
+    );
+  }
+
+  @Patch(":messageId/dispatches/:dispatchId/acknowledge")
+  acknowledge(
+    @Param("incidentId") incidentId: string,
+    @Param("messageId") messageId: string,
+    @Param("dispatchId") dispatchId: string,
+    @Headers("authorization") authorizationHeader?: string
+  ) {
+    return this.messagesService.acknowledgeDispatch(
+      incidentId,
+      messageId,
+      dispatchId,
+      authorizationHeader
+    );
   }
 
   @Patch(":messageId")

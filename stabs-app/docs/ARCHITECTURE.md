@@ -134,3 +134,26 @@ Damit ist die Architektur jetzt klarer getrennt:
 
 - `/` fuer Ueberblick, Betriebsstatus und Kernzugang
 - `/messages` fuer konzentrierte Nachrichtenarbeit
+
+## 12. Uebungstauglicher Nachrichten- und Tagebuchkern
+
+Zum Arbeitsstand `2026-05-16-04` wurde der Nachrichtenpfad fuer eine erste
+Stabsuebung funktional erweitert:
+
+- Backend:
+  - `MessageDispatch` als Incident-gebundene Rollenpostfach-Zustellung
+  - Quittierung je Rollenpostfach
+  - neues Modul `journal` fuer bewusste Tagebuchuebernahme
+  - neue Rechte `messages.dispatch`, `messages.acknowledge`, `journal.read`, `journal.create`
+- Frontend:
+  - `mein Eingang` als rollenbezogene Sicht auf die Nachrichtenzentrale
+  - deutlichere Prioritaetslogik inklusive `Blitz` und `Staatsnot` als vorbereitete Stufen
+  - Weitergabe an Rollenpostfaecher, Quittierung und `ins Tagebuch uebernehmen`
+  - neue Route `/journal` als sichtbarer Modulanker fuer den Journalpfad
+
+Wichtige aktuelle Einordnung:
+
+- das Rollenmodell ist fuer diese Stufe noch global benutzerbezogen und nicht als
+  vollwertige lagebezogene Incident-Mitgliedschaft ausmodelliert
+- die erste nutzbare Arbeitslogik fuer Rollenpostfaecher und Quittierung ist aber
+  bereits auf dieselbe Incident-Basis und dieselben Message-Objekte gelegt

@@ -37,6 +37,8 @@ enum MessagePriority {
   normal
   hoch
   sofort
+  blitz
+  staatsnot
 }
 
 enum MessageStatus {
@@ -66,6 +68,9 @@ model User {
   messagesCreated  Message[]            @relation("MessageCreator")
   messagesUpdated  Message[]            @relation("MessageUpdater")
   messageAudits    MessageAuditEntry[]  @relation("MessageAuditActor")
+  messageDispatchesCreated MessageDispatch[] @relation("MessageDispatchCreator")
+  messageDispatchesAcknowledged MessageDispatch[] @relation("MessageDispatchAcknowledger")
+  journalEntriesCreated JournalEntry[] @relation("JournalEntryCreator")
 }
 
 model Role {
@@ -107,6 +112,8 @@ model Incident {
   auditEntries    IncidentAuditEntry[]
   messages        Message[]
   messageAudits   MessageAuditEntry[]
+  messageDispatches MessageDispatch[]
+  journalEntries  JournalEntry[]
 
   @@index([createdAt(sort: Desc)])
 }
@@ -150,6 +157,7 @@ model Message {
   createdBy       User             @relation("MessageCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
   updatedBy       User             @relation("MessageUpdater", fields: [updatedByUserId], references: [id], onDelete: Restrict)
   auditEntries    MessageAuditEntry[]
+  dispatches      MessageDispatch[]
 
   @@unique([incidentId, trackingNumber])
   @@index([incidentId, messageTime(sort: Desc)])
@@ -170,4 +178,39 @@ model MessageAuditEntry {
   actorUser   User               @relation("MessageAuditActor", fields: [actorUserId], references: [id], onDelete: Restrict)
 
   @@index([incidentId, messageId, createdAt(sort: Desc)])
+}
+
+model MessageDispatch {
+  id                     String   @id
+  incidentId             String
+  messageId              String
+  targetRole             String
+  dispatchedAt           DateTime @default(now())
+  dispatchedByUserId     String
+  dispatchNote           String
+  seenAt                 DateTime?
+  acknowledgedAt         DateTime?
+  acknowledgedByUserId   String?
+  processingStatus       String
+  incident               Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  message                Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  dispatchedBy           User     @relation("MessageDispatchCreator", fields: [dispatchedByUserId], references: [id], onDelete: Restrict)
+  acknowledgedBy         User?    @relation("MessageDispatchAcknowledger", fields: [acknowledgedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([incidentId, targetRole, processingStatus])
+  @@index([messageId, targetRole])
+}
+
+model JournalEntry {
+  id              String   @id
+  incidentId      String
+  title           String
+  body            String
+  createdAt       DateTime @default(now())
+  createdByUserId String
+  sourceMessageId String?
+  incident        Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  createdBy       User     @relation("JournalEntryCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  @@index([incidentId, createdAt(sort: Desc)])
 }
