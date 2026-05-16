@@ -1,7 +1,7 @@
 # Umsetzungsplan Stabsunterstuetzungssoftware
 
-Version: 1.1  
-Stand: 2026-05-15  
+Version: 1.2  
+Stand: 2026-05-16  
 Status: Projekt- und Entwicklungsroadmap  
 Bezug:
 
@@ -107,7 +107,7 @@ Den minimal notwendigen gemeinsamen Einsatzkern bereitstellen.
 
 - `MVP 0.1`
 
-### Verifizierter Ist-Stand am 2026-05-15
+### Verifizierter Ist-Stand am 2026-05-16
 
 Fuer den aktuellen Live-Stand ist aus Phase C bereits praktisch erreicht:
 
@@ -116,12 +116,19 @@ Fuer den aktuellen Live-Stand ist aus Phase C bereits praktisch erreicht:
 - Lagen koennen ueber das Frontend angelegt werden
 - Incident-Daten werden persistent in PostgreSQL gehalten
 - Grundrechte fuer Incident-Lesen/-Anlegen/-Bearbeiten greifen im Backend
+- Audit-/Historienlogik und persistente Auth sind im Code umgesetzt und lokal verifiziert
 
 Noch offen innerhalb des Plattformkerns:
 
-- Demo-Authentifizierung durch persistente Benutzer-/Rollendaten ersetzen
-- Audit-Basis fuer Lageaenderungen vervollstaendigen
+- neue Migration fuer persistente Benutzer-/Rollen-/Auditdaten in die Live-Datenbank ausrollen
+- neue Backend- und Frontend-Revision live ausrollen und fachlich nachverifizieren
 - lagebezogene Mitgliedschaften technisch ausbauen
+
+Frontend-Start fuer die naechste Fachstufe:
+
+- eingangsorientierte Nachrichtenzentrale als erste sichtbare Facharbeitsflaeche im Frontend begonnen
+- interaktive Frontend-Vorstufe fuer Sichtung, Status, Zuweisung und Bearbeitungsspur umgesetzt
+- bewusst noch ohne neue Message-Persistenz, damit Arbeitslogik und UI erst sichtbar und pruefbar werden
 
 ### Abnahme fuer Phase C
 
@@ -134,7 +141,8 @@ Einordnung zum aktuellen Stand:
 
 - Die ersten zwei Punkte sind im Live-System bereits sichtbar erfuellt.
 - Die Rechtebasis ist fuer Incident-Endpunkte grundlegend umgesetzt.
-- Benutzer-Lage-Zuordnung und belastbare Auditbasis sind die naechsten logischen Luecken innerhalb von Phase C.
+- Die Auditbasis ist im Code jetzt geschlossen, muss aber noch als Live-Betriebsstand nachgezogen werden.
+- Benutzer-Lage-Zuordnung bleibt danach die naechste logische Luecke innerhalb von Phase C.
 
 ## 4.4 Phase D: Nachrichten und Tagebuch
 
@@ -675,3 +683,30 @@ Noch offen bis zum naechsten funktionalen Meilenstein:
 - Benutzer-/Sitzungsanzeige
 - Anlegen neuer Lagen aus der Oberflaeche
 - Persistenz mit Datenbank
+
+### Entwicklungsstand 2026-05-15-03
+
+- Audit-/Historienlogik fuer Lagen im Backend und Frontend umgesetzt.
+- persistente Benutzer-, Rollen- und Session-Modelle in Prisma und PostgreSQL-Struktur aufgenommen.
+- Seed-basierter Login-Pfad auf persistente Store-Abstraktion umgestellt.
+- Test- und Build-Verifikation fuer API und Frontend mit dem neuen Kern erfolgreich ausgefuehrt.
+
+### Entwicklungsstand 2026-05-16
+
+- Doku auf den Unterschied zwischen `lokal verifiziertem erweitertem Code-Stand` und `bereits ausgerolltem Live-Stand` nachgeschaerft.
+- naechste Pflichtschritte vor dem Fachausbau festgelegt:
+  - Prisma-Migration deployen
+  - Backend deployen
+  - Frontend deployen
+  - Live-Nachverifikation des neuen Auth-/Audit-Pfads
+- danach bleibt fachlich als naechster Ausbau:
+  - lagebezogene Mitgliedschaften
+  - feinere Rechtepruefung
+  - Nachrichten und Tagebuch
+
+### Entwicklungsstand 2026-05-16-02
+
+- erste sichtbare Fachoberflaeche fuer das `Nachrichtenmodul` im Frontend begonnen.
+- neue `Nachrichtenzentrale` als eingangsorientierte Arbeitsflaeche fuer Sichtung, Priorisierung, Zuweisung und Bearbeitungsspur umgesetzt.
+- Tablet-/Desktop-geeignetes List-Detail-Layout mit interaktiver lokaler Vorschau fuer neue Nachrichten eingebaut.
+- Doku und Spezifikation fuer den Frontend-Start des Nachrichtenmoduls nachgezogen.

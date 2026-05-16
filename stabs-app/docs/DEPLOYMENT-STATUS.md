@@ -1,18 +1,21 @@
 # Deployment-Status
 
-Version: `1.2`  
-Stand: `2026-05-15`  
+Version: `1.4`  
+Stand: `2026-05-16`  
 Status: `Live-Betrieb / Referenz fuer Weiterentwicklung`
 
 ## 1. Kurzfassung
 
-Zum Stand `2026-05-15` ist der erste echte Online-Kern live und funktional erweitert:
+Zum Stand `2026-05-16` ist der erste echte Online-Kern live. Zusaetzlich liegt ein erweiterter, lokal verifizierter Code-Stand fuer Audit/Historie und persistente Auth vor:
 
 - Frontend live ueber Firebase App Hosting
 - Backend live ueber Google Cloud Run
 - Frontend zeigt echten Backend-Status
 - Frontend erlaubt Login, Benutzerstatus und Lagearbeit
+- Frontend enthaelt jetzt zusaetzlich eine erste sichtbare Nachrichtenzentrale als Frontend-Vorstufe
 - Incident-Daten liegen persistent in PostgreSQL ueber Cloud SQL
+- Audit-/Historienlogik fuer Lagen ist im Code umgesetzt, aber noch nicht als Live-Stand nachverifiziert
+- persistente Benutzer-, Rollen- und Session-Daten sind im Code umgesetzt, aber noch nicht als Live-Stand nachverifiziert
 
 Damit ist das Projekt nicht mehr nur ein online sichtbarer Demo-Kern, sondern hat jetzt auch eine erste dauerhafte Datenbasis fuer die Lageverwaltung.
 
@@ -62,6 +65,11 @@ Hinweis:
 - Nach erfolgreichem Login lassen sich neue Lagen anlegen.
 - Neu angelegte Lagen erscheinen in der Liste aus dem Backend.
 
+Hinweis zum Stand `2026-05-16`:
+
+- Diese Punkte sind fuer den bereits ausgerollten Live-Kern verifiziert.
+- Die neue Historienansicht und die persistente Auth-Umstellung sind bislang lokal gebaut und getestet, aber noch nicht als Live-Revision verifiziert.
+
 ## 7. Relevante Deploy-Dateien
 
 - Frontend-Deploy-Konfiguration: `firebase-web/apphosting.yaml`
@@ -86,6 +94,12 @@ Zum letzten verifizierten Stand gilt:
 - Ein verifizierter Persistenztest wurde mit einer neuen Lage ueber den Live-Endpunkt durchgefuehrt.
 - Cloud Run Revision `stabs-api-00003-t4b` laeuft mit angebundener Cloud-SQL-Instanz.
 
+Zusatz fuer den lokalen, noch nicht live nachverifizierten Code-Stand:
+
+- API-Build und API-Tests fuer Auth-/Audit-Erweiterung laufen lokal erfolgreich.
+- Frontend-Typecheck, Frontend-Tests und Frontend-Build fuer Historienansicht laufen lokal erfolgreich.
+- Frontend-Typecheck, Frontend-Tests und Frontend-Build fuer die erste Nachrichtenzentrale laufen lokal erfolgreich.
+
 ## 9. Zeitlinie
 
 ### 2026-05-14
@@ -106,6 +120,21 @@ Zum letzten verifizierten Stand gilt:
 - Cloud-Run-Service `stabs-api` auf Revision `stabs-api-00003-t4b` mit Cloud-SQL-Anbindung ausgerollt.
 - Persistenzpfad live verifiziert durch Login, Incident-Anlage und erneutes Lesen ueber `/api/incidents`.
 
+### 2026-05-16
+
+- Prisma-Schema um persistente Benutzer-, Rollen-, Session- und Audit-Tabellen erweitert.
+- neue Migration `20260515094500_add_auth_and_incident_audit` angelegt.
+- API um `GET /api/incidents/:incidentId/history` erweitert.
+- Frontend um eine Historienansicht je Lage erweitert.
+- Login- und Session-Pfad auf persistente Store-Abstraktionen umgestellt.
+- lokale Verifikation fuer API und Frontend erfolgreich ausgefuehrt.
+
+### 2026-05-16-02
+
+- erste sichtbare Frontend-Arbeitsflaeche fuer das Nachrichtenmodul begonnen.
+- eingangsorientierte Nachrichtenzentrale mit Listenbereich, Detailbereich, Such-/Statusfiltern und lokaler Erfassungslogik eingebaut.
+- diese Stufe ist bewusst noch kein live verifizierter Message-Backend-Stand, sondern eine sichtbar nutzbare Frontend-Vorstufe fuer die weitere Fachiteration.
+
 ## 10. Letzte relevante Commits
 
 - `d18c479` `Add interactive incident workspace`
@@ -122,11 +151,33 @@ Zum letzten verifizierten Stand gilt:
 - Cloud Run bezieht `DATABASE_URL` aus Secret Manager.
 - Cloud Run nutzt fuer PostgreSQL die angebundene Cloud-SQL-Instanz `tommys-stabssoftware:europe-west4:stabs-db`.
 
-## 12. Naechster sinnvoller Ausbau
+## 12. Naechste erforderliche Schritte
 
-Die naechste Entwicklungsstufe sollte jetzt auf dem persistenten Incident-Kern aufsetzen:
+Bevor der neue Kern als echter Betriebsstand gelten kann, sind diese Schritte erforderlich:
 
-1. Bearbeiten von Lagen gegen den persistenten Store gezielt nachverifizieren
-2. Demo-Benutzer und Rollen aus dem In-Memory-Zustand herausloesen
-3. Audit-/Historienlogik fuer Lageaenderungen aufbauen
-4. Danach weitere Fachmodule auf denselben persistenten Kern setzen
+1. neue Prisma-Migration in Cloud SQL deployen
+2. Backend als neue Cloud-Run-Revision deployen
+3. Frontend-Deploy fuer die Historienansicht durchziehen
+4. Login, Session, Incident-Anlage, Incident-Bearbeitung und Verlauf gegen den Live-Stand gezielt nachverifizieren
+
+Danach ist die naechste Entwicklungsstufe:
+
+1. lagebezogene Mitgliedschaften und feinere Rollen-/Rechtepruefung anschliessen
+2. Nachrichten und Tagebuch auf demselben persistenten Kern aufbauen und die neue Frontend-Nachrichtenzentrale an echte Message-Endpunkte anbinden
+3. danach weitere Fachmodule auf denselben persistenten Kern setzen
+
+## 13. Entwicklungsstand 2026-05-15-02
+
+- Prisma-Schema um `User`, `Role`, `UserRole`, `AuthSession` und `IncidentAuditEntry` erweitert.
+- API um `GET /api/incidents/:incidentId/history` erweitert.
+- Login- und Session-Aufloesung von In-Memory auf persistente Store-Abstraktionen umgestellt.
+- Seed-Daten fuer erste Benutzer und Rollen in den persistenten Pfad ueberfuehrt.
+- Frontend um eine Historienansicht je Lage erweitert.
+- Test-Skripte fuer API und Frontend auf explizite Testdatei-Erkennung nachgeschaerft.
+
+## 14. Operative Klarstellung
+
+Zum Stand `2026-05-16` ist zwischen zwei Ebenen zu unterscheiden:
+
+- `Live-Betrieb`: der bereits ausgerollte Incident-Kern mit persistenter Incident-Datenhaltung.
+- `Erweiterter Code-Stand`: Audit/Historie und persistente Auth sind im Repository umgesetzt und lokal verifiziert, aber noch nicht als neuer Live-Stand in Cloud SQL, Cloud Run und Firebase App Hosting nachgezogen.

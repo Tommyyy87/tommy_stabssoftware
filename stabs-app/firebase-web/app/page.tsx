@@ -1,4 +1,5 @@
 import { loadApiSnapshot } from "../lib/api";
+import { MessageCenter } from "./message-center";
 import { OperationsConsole } from "./operations-console";
 
 export const dynamic = "force-dynamic";
@@ -25,11 +26,11 @@ export default async function HomePage() {
   return (
     <main className="shell">
       <section className="hero">
-        <p className="eyebrow">MVP 0.1</p>
+        <p className="eyebrow">MVP 0.2 Anlauf</p>
         <h1>Stabsunterstuetzungssoftware</h1>
         <p className="lead">
-          Fundament fuer eine browserbasierte, mehrbenutzerfaehige
-          Stabsunterstuetzungssoftware mit gemeinsamem Einsatzkern.
+          Erste sichtbare Fachoberflaeche fuer die Nachrichtenzentrale auf einem
+          bereits lauffaehigen Lage-, Rollen- und Audit-Fundament.
         </p>
       </section>
 
@@ -41,6 +42,8 @@ export default async function HomePage() {
           ))}
         </ul>
       </section>
+
+      <MessageCenter />
 
       <section className="panel grid-panel">
         <div>
