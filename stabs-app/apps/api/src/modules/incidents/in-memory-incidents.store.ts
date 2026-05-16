@@ -1,12 +1,14 @@
 import { Injectable } from "@nestjs/common";
 import {
   createIncident,
+  getIncidentHistory,
   listIncidents,
   resolveUserDisplayName,
   updateIncident
 } from "../../shared/demo-store";
 import {
   CreateIncidentInput,
+  IncidentHistoryEntry,
   IncidentStore,
   IncidentSummary,
   UpdateIncidentInput
@@ -19,6 +21,11 @@ export class InMemoryIncidentsStore implements IncidentStore {
       ...incident,
       createdBy: resolveUserDisplayName(incident.createdBy)
     }));
+  }
+
+  async listHistory(incidentId: string): Promise<IncidentHistoryEntry[] | null> {
+    const history = getIncidentHistory(incidentId);
+    return history ? history.map((entry) => ({ ...entry, changes: [...entry.changes] })) : null;
   }
 
   async create(
@@ -35,9 +42,10 @@ export class InMemoryIncidentsStore implements IncidentStore {
 
   async update(
     incidentId: string,
-    input: UpdateIncidentInput
+    input: UpdateIncidentInput,
+    updatedByUserId: string
   ): Promise<IncidentSummary | null> {
-    const incident = updateIncident(incidentId, input);
+    const incident = updateIncident(incidentId, input, updatedByUserId);
 
     if (!incident) {
       return null;

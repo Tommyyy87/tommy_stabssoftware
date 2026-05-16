@@ -1,22 +1,48 @@
 import { Module } from "@nestjs/common";
 import { HealthController } from "./health.controller";
 import { AuthController } from "./modules/auth/auth.controller";
+import { AUTH_STORE } from "./modules/auth/auth.store";
 import { AuthService } from "./modules/auth/auth.service";
+import { InMemoryAuthStore } from "./modules/auth/in-memory-auth.store";
+import { PrismaAuthStore } from "./modules/auth/prisma-auth.store";
 import { IncidentsController } from "./modules/incidents/incidents.controller";
 import { InMemoryIncidentsStore } from "./modules/incidents/in-memory-incidents.store";
 import { INCIDENT_STORE } from "./modules/incidents/incidents.store";
 import { PrismaIncidentsStore } from "./modules/incidents/prisma-incidents.store";
 import { IncidentsService } from "./modules/incidents/incidents.service";
+import { MessagesController } from "./modules/messages/messages.controller";
+import { InMemoryMessagesStore } from "./modules/messages/in-memory-messages.store";
+import { MESSAGE_STORE } from "./modules/messages/messages.store";
+import { PrismaMessagesStore } from "./modules/messages/prisma-messages.store";
+import { MessagesService } from "./modules/messages/messages.service";
 import { PrismaService } from "./prisma/prisma.service";
 
 @Module({
-  controllers: [HealthController, AuthController, IncidentsController],
+  controllers: [
+    HealthController,
+    AuthController,
+    IncidentsController,
+    MessagesController
+  ],
   providers: [
     AuthService,
     IncidentsService,
+    MessagesService,
     PrismaService,
+    InMemoryAuthStore,
+    PrismaAuthStore,
     InMemoryIncidentsStore,
     PrismaIncidentsStore,
+    InMemoryMessagesStore,
+    PrismaMessagesStore,
+    {
+      provide: AUTH_STORE,
+      useFactory: (
+        inMemoryAuthStore: InMemoryAuthStore,
+        prismaAuthStore: PrismaAuthStore
+      ) => (process.env.DATABASE_URL ? prismaAuthStore : inMemoryAuthStore),
+      inject: [InMemoryAuthStore, PrismaAuthStore]
+    },
     {
       provide: INCIDENT_STORE,
       useFactory: (
@@ -25,6 +51,14 @@ import { PrismaService } from "./prisma/prisma.service";
       ) =>
         process.env.DATABASE_URL ? prismaIncidentsStore : inMemoryIncidentsStore,
       inject: [InMemoryIncidentsStore, PrismaIncidentsStore]
+    },
+    {
+      provide: MESSAGE_STORE,
+      useFactory: (
+        inMemoryMessagesStore: InMemoryMessagesStore,
+        prismaMessagesStore: PrismaMessagesStore
+      ) => (process.env.DATABASE_URL ? prismaMessagesStore : inMemoryMessagesStore),
+      inject: [InMemoryMessagesStore, PrismaMessagesStore]
     }
   ]
 })

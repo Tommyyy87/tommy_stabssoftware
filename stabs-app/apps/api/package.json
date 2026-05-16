@@ -8,7 +8,7 @@
     "lint": "tsc --noEmit -p tsconfig.json",
     "prisma:generate": "prisma generate",
     "db:migrate:deploy": "prisma migrate deploy",
-    "test": "node --test dist",
+    "test": "node --test dist/runtime-config.test.js dist/modules/auth/auth.service.test.js dist/modules/incidents/incidents.service.test.js dist/modules/messages/messages.service.test.js dist/shared/demo-store.test.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "verify:foundation": "node scripts/verify-foundation.cjs"
   },

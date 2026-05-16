@@ -8,6 +8,9 @@ import {
   createLocalMessage,
   demoMessages,
   filterMessages,
+  getMessageDirectionLabel,
+  getMessagePriorityLabel,
+  getMessageStatusLabel,
   MessageChannel,
   MessagePriority,
   MessageRecord,
@@ -35,10 +38,6 @@ function formatDate(value: string) {
     minute: "2-digit",
     timeZone: "Europe/Berlin"
   }).format(new Date(value));
-}
-
-function formatDirection(value: MessageRecord["direction"]) {
-  return value === "eingang" ? "Eingang" : "Ausgang";
 }
 
 export function MessageCenter() {
@@ -177,11 +176,11 @@ export function MessageCenter() {
               }
               value={filters.status}
             >
-              {messageStatuses.map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
+                      {messageStatuses.map((status) => (
+                        <option key={status} value={status}>
+                          {getMessageStatusLabel(status)}
+                        </option>
+                      ))}
             </select>
           </label>
 
@@ -196,11 +195,11 @@ export function MessageCenter() {
               }
               value={filters.priority}
             >
-              {messagePriorities.map((priority) => (
-                <option key={priority} value={priority}>
-                  {priority}
-                </option>
-              ))}
+                      {messagePriorities.map((priority) => (
+                        <option key={priority} value={priority}>
+                          {getMessagePriorityLabel(priority)}
+                        </option>
+                      ))}
             </select>
           </label>
 
@@ -215,11 +214,11 @@ export function MessageCenter() {
               }
               value={filters.direction}
             >
-              {messageDirections.map((direction) => (
-                <option key={direction} value={direction}>
-                  {direction}
-                </option>
-              ))}
+                      {messageDirections.map((direction) => (
+                        <option key={direction} value={direction}>
+                          {getMessageDirectionLabel(direction)}
+                        </option>
+                      ))}
             </select>
           </label>
 
@@ -367,14 +366,14 @@ export function MessageCenter() {
                   <span className={`priority-dot priority-${message.priority}`} />
                   <span className="message-tracking">{message.trackingNumber}</span>
                   <span className={`status-pill status-${message.status}`}>
-                    {message.status}
+                    {getMessageStatusLabel(message.status)}
                   </span>
                 </div>
 
                 <strong>{message.subject}</strong>
 
                 <p className="message-item-meta">
-                  {formatDirection(message.direction)} · {message.senderLabel}
+                  {getMessageDirectionLabel(message.direction)} · {message.senderLabel}
                 </p>
                 <p className="message-item-meta">
                   {formatDate(message.messageTime)} · {message.channel}
@@ -396,12 +395,12 @@ export function MessageCenter() {
                 </div>
                 <div className="detail-pill-row">
                   <span className={`status-pill status-${selectedMessage.status}`}>
-                    {selectedMessage.status}
+                    {getMessageStatusLabel(selectedMessage.status)}
                   </span>
                   <span
                     className={`status-pill priority-badge priority-badge-${selectedMessage.priority}`}
                   >
-                    {selectedMessage.priority}
+                    {getMessagePriorityLabel(selectedMessage.priority)}
                   </span>
                 </div>
               </div>
@@ -412,7 +411,7 @@ export function MessageCenter() {
                   <dl className="detail-definition-list">
                     <div>
                       <dt>Richtung</dt>
-                      <dd>{formatDirection(selectedMessage.direction)}</dd>
+                      <dd>{getMessageDirectionLabel(selectedMessage.direction)}</dd>
                     </div>
                     <div>
                       <dt>Kanal</dt>
@@ -477,7 +476,7 @@ export function MessageCenter() {
                       >
                         <option value="neu">neu</option>
                         <option value="gesichtet">gesichtet</option>
-                        <option value="in Bearbeitung">in Bearbeitung</option>
+                        <option value="in_bearbeitung">in Bearbeitung</option>
                         <option value="weitergeleitet">weitergeleitet</option>
                         <option value="erledigt">erledigt</option>
                       </select>

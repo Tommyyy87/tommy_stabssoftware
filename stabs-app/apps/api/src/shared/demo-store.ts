@@ -1,27 +1,10 @@
-type AppRole =
-  | "system_admin"
-  | "lageleiter"
-  | "stabsleitung"
-  | "kgs"
-  | "s1"
-  | "s2"
-  | "s3"
-  | "s4"
-  | "s5"
-  | "s6"
-  | "reader";
-
-type AppUser = {
-  id: string;
-  username: string;
-  displayName: string;
-  roles: AppRole[];
-};
-
-type AuthSession = {
-  token: string;
-  user: AppUser;
-};
+import { IncidentHistoryEntry } from "../modules/incidents/incidents.store";
+import {
+  CreateMessageInput,
+  MessageHistoryEntry,
+  MessageSummary,
+  UpdateMessageInput
+} from "../modules/messages/messages.store";
 
 type StoredIncident = {
   id: string;
@@ -45,6 +28,11 @@ type UpdateIncidentInput = {
 
 const now = new Date().toISOString();
 
+const displayNames = new Map<string, string>([
+  ["user-admin", "System Admin"],
+  ["user-s2", "S2 Lage"]
+]);
+
 const seededIncidents: StoredIncident[] = [
   {
     id: "incident-001",
@@ -56,79 +44,121 @@ const seededIncidents: StoredIncident[] = [
   }
 ];
 
-const seededUsers: AppUser[] = [
+const incidents: StoredIncident[] = seededIncidents.map((incident) => ({ ...incident }));
+
+const incidentHistory = new Map<string, IncidentHistoryEntry[]>(
+  seededIncidents.map((incident) => [
+    incident.id,
+    [
+      {
+        id: `audit-seed-${incident.id}`,
+        incidentId: incident.id,
+        action: "created",
+        summary: "Lage angelegt.",
+        createdAt: incident.createdAt,
+        actor: resolveUserDisplayName(incident.createdBy),
+        changes: [
+          { field: "title", from: null, to: incident.title },
+          { field: "referenceNumber", from: null, to: incident.referenceNumber },
+          { field: "status", from: null, to: incident.status }
+        ]
+      }
+    ]
+  ])
+);
+
+type StoredMessage = Omit<MessageSummary, "createdBy" | "updatedBy"> & {
+  createdBy: string;
+  updatedBy: string;
+};
+
+const seededMessages: StoredMessage[] = [
   {
-    id: "user-admin",
-    username: "admin",
-    displayName: "System Admin",
-    roles: ["system_admin", "lageleiter"]
-  },
-  {
-    id: "user-s2",
-    username: "s2",
-    displayName: "S2 Lage",
-    roles: ["s2", "reader"]
+    id: "message-001",
+    incidentId: "incident-001",
+    trackingNumber: "E-240516-001",
+    direction: "eingang",
+    channel: "funk",
+    priority: "sofort",
+    status: "neu",
+    messageTime: now,
+    recordedAt: now,
+    senderLabel: "Abschnitt Nord",
+    recipientLabel: "Stabsraum S2/S3",
+    subject: "Evakuierung vorbereiten",
+    body: "Winddreher nach Ost. Bitte Evakuierung vorbereiten.",
+    assignee: "S3 Einsatz",
+    distribution: "S2, S3, S5",
+    notes: "Quittierung ausstehend.",
+    createdAt: now,
+    createdBy: "user-admin",
+    updatedAt: now,
+    updatedBy: "user-admin"
   }
 ];
 
-const rolePermissions = new Map<AppRole, string[]>([
-  ["system_admin", ["incidents.read", "incidents.create", "incidents.update", "roles.read", "audit.read"]],
-  ["lageleiter", ["incidents.read", "incidents.create", "incidents.update", "roles.read"]],
-  ["stabsleitung", ["incidents.read"]],
-  ["kgs", ["incidents.read"]],
-  ["s1", ["incidents.read"]],
-  ["s2", ["incidents.read"]],
-  ["s3", ["incidents.read"]],
-  ["s4", ["incidents.read"]],
-  ["s5", ["incidents.read"]],
-  ["s6", ["incidents.read"]],
-  ["reader", ["incidents.read"]]
-]);
+const messages: StoredMessage[] = seededMessages.map((message) => ({ ...message }));
 
-const sessions = new Map<string, AuthSession>();
-
-const incidents: StoredIncident[] = seededIncidents.map((incident) => ({ ...incident }));
-
-export function getSeededUsers() {
-  return seededUsers;
-}
+const messageHistory = new Map<string, MessageHistoryEntry[]>(
+  seededMessages.map((message) => [
+    message.id,
+    [
+      {
+        id: `message-audit-seed-${message.id}`,
+        messageId: message.id,
+        incidentId: message.incidentId,
+        action: "created",
+        summary: "Nachricht erfasst.",
+        createdAt: message.createdAt,
+        actor: resolveUserDisplayName(message.createdBy),
+        changes: [
+          { field: "subject", from: null, to: message.subject },
+          { field: "status", from: null, to: message.status },
+          { field: "assignee", from: null, to: message.assignee }
+        ]
+      }
+    ]
+  ])
+);
 
 export function resolveUserDisplayName(userId: string) {
-  return seededUsers.find((user) => user.id === userId)?.displayName ?? userId;
+  return displayNames.get(userId) ?? userId;
 }
 
 export function getSeededIncidents() {
   return seededIncidents.map((incident) => ({ ...incident }));
 }
 
-export function createSession(user: AppUser) {
-  const token = `demo-${user.id}`;
-  const session: AuthSession = { token, user };
-  sessions.set(token, session);
-  return session;
-}
-
-export function getSession(token: string | undefined) {
-  if (!token) {
-    return null;
-  }
-
-  return sessions.get(token) ?? null;
-}
-
-export function getPermissionsForRoles(roles: AppRole[]) {
-  const permissions = new Set<string>();
-
-  for (const role of roles) {
-    const values = rolePermissions.get(role) ?? [];
-    values.forEach((value) => permissions.add(value));
-  }
-
-  return Array.from(permissions).sort();
+export function getSeededMessagesForIncidents() {
+  return seededMessages.map((message) => ({ ...message }));
 }
 
 export function listIncidents() {
   return incidents;
+}
+
+export function listMessagesByIncident(incidentId: string) {
+  return messages
+    .filter((message) => message.incidentId === incidentId)
+    .sort((left, right) => right.messageTime.localeCompare(left.messageTime));
+}
+
+export function getIncidentHistory(incidentId: string) {
+  const history = incidentHistory.get(incidentId);
+  return history ? history.map((entry) => ({ ...entry, changes: [...entry.changes] })) : null;
+}
+
+export function getMessageHistory(incidentId: string, messageId: string) {
+  const message = messages.find(
+    (entry) => entry.id === messageId && entry.incidentId === incidentId
+  );
+
+  if (!message) {
+    return null;
+  }
+
+  const history = messageHistory.get(messageId);
+  return history ? history.map((entry) => ({ ...entry, changes: [...entry.changes] })) : null;
 }
 
 export function createIncident(input: CreateIncidentInput, createdBy: string) {
@@ -142,27 +172,254 @@ export function createIncident(input: CreateIncidentInput, createdBy: string) {
   };
 
   incidents.unshift(incident);
+  incidentHistory.set(incident.id, [
+    {
+      id: `audit-${incident.id}-created`,
+      incidentId: incident.id,
+      action: "created",
+      summary: "Lage angelegt.",
+      createdAt: incident.createdAt,
+      actor: resolveUserDisplayName(createdBy),
+      changes: [
+        { field: "title", from: null, to: incident.title },
+        { field: "referenceNumber", from: null, to: incident.referenceNumber },
+        { field: "status", from: null, to: incident.status }
+      ]
+    }
+  ]);
+
   return incident;
 }
 
-export function updateIncident(incidentId: string, input: UpdateIncidentInput) {
+export function updateIncident(
+  incidentId: string,
+  input: UpdateIncidentInput,
+  updatedBy: string
+) {
   const incident = incidents.find((entry) => entry.id === incidentId);
 
   if (!incident) {
     return null;
   }
 
+  const changes: IncidentHistoryEntry["changes"] = [];
+
   if (input.title !== undefined) {
-    incident.title = input.title.trim();
+    const nextTitle = input.title.trim();
+
+    if (nextTitle !== incident.title) {
+      changes.push({
+        field: "title",
+        from: incident.title,
+        to: nextTitle
+      });
+    }
+
+    incident.title = nextTitle;
   }
 
   if (input.referenceNumber !== undefined) {
-    incident.referenceNumber = input.referenceNumber.trim();
+    const nextReferenceNumber = input.referenceNumber.trim();
+
+    if (nextReferenceNumber !== incident.referenceNumber) {
+      changes.push({
+        field: "referenceNumber",
+        from: incident.referenceNumber,
+        to: nextReferenceNumber
+      });
+    }
+
+    incident.referenceNumber = nextReferenceNumber;
   }
 
   if (input.status !== undefined) {
+    if (input.status !== incident.status) {
+      changes.push({
+        field: "status",
+        from: incident.status,
+        to: input.status
+      });
+    }
+
     incident.status = input.status;
   }
 
+  if (changes.length > 0) {
+    const history = incidentHistory.get(incident.id) ?? [];
+    history.unshift({
+      id: `audit-${incident.id}-${history.length + 1}`,
+      incidentId: incident.id,
+      action: "updated",
+      summary:
+        changes.length === 1 && changes[0]?.field === "status"
+          ? `Statuswechsel von ${changes[0].from} zu ${changes[0].to}.`
+          : `Lage aktualisiert: ${changes.map((entry) => entry.field).join(", ")}.`,
+      createdAt: new Date().toISOString(),
+      actor: resolveUserDisplayName(updatedBy),
+      changes
+    });
+    incidentHistory.set(incident.id, history);
+  }
+
   return incident;
+}
+
+export function createMessage(
+  incidentId: string,
+  input: CreateMessageInput,
+  createdBy: string
+) {
+  const createdAt = new Date().toISOString();
+  const message: StoredMessage = {
+    id: `message-${String(messages.length + 1).padStart(3, "0")}`,
+    incidentId,
+    trackingNumber: `E-${createdAt.slice(8, 10)}${createdAt.slice(11, 13)}${createdAt.slice(
+      14,
+      16
+    )}-${String(messages.length + 1).padStart(3, "0")}`,
+    direction: input.direction,
+    channel: input.channel,
+    priority: input.priority,
+    status: "neu",
+    messageTime: input.messageTime,
+    recordedAt: createdAt,
+    senderLabel: input.senderLabel,
+    recipientLabel: input.recipientLabel,
+    subject: input.subject,
+    body: input.body,
+    assignee: input.assignee ?? "Sichtung offen",
+    distribution: input.distribution ?? "offen",
+    notes: input.notes ?? "",
+    createdAt,
+    createdBy,
+    updatedAt: createdAt,
+    updatedBy: createdBy
+  };
+
+  messages.unshift(message);
+  messageHistory.set(message.id, [
+    {
+      id: `message-audit-${message.id}-created`,
+      messageId: message.id,
+      incidentId,
+      action: "created",
+      summary: "Nachricht erfasst.",
+      createdAt,
+      actor: resolveUserDisplayName(createdBy),
+      changes: [
+        { field: "subject", from: null, to: message.subject },
+        { field: "status", from: null, to: message.status },
+        { field: "assignee", from: null, to: message.assignee }
+      ]
+    }
+  ]);
+
+  return message;
+}
+
+export function updateMessage(
+  incidentId: string,
+  messageId: string,
+  input: UpdateMessageInput,
+  updatedBy: string
+) {
+  const message = messages.find(
+    (entry) => entry.id === messageId && entry.incidentId === incidentId
+  );
+
+  if (!message) {
+    return null;
+  }
+
+  const changes: MessageHistoryEntry["changes"] = [];
+
+  function pushChange(
+    field: MessageHistoryEntry["changes"][number]["field"],
+    from: string,
+    to: string
+  ) {
+    if (from !== to) {
+      changes.push({ field, from, to });
+    }
+  }
+
+  if (input.channel !== undefined) {
+    pushChange("channel", message.channel, input.channel);
+    message.channel = input.channel;
+  }
+
+  if (input.priority !== undefined) {
+    pushChange("priority", message.priority, input.priority);
+    message.priority = input.priority;
+  }
+
+  if (input.status !== undefined) {
+    pushChange("status", message.status, input.status);
+    message.status = input.status;
+  }
+
+  if (input.messageTime !== undefined) {
+    pushChange("messageTime", message.messageTime, input.messageTime);
+    message.messageTime = input.messageTime;
+  }
+
+  if (input.senderLabel !== undefined) {
+    pushChange("senderLabel", message.senderLabel, input.senderLabel);
+    message.senderLabel = input.senderLabel;
+  }
+
+  if (input.recipientLabel !== undefined) {
+    pushChange("recipientLabel", message.recipientLabel, input.recipientLabel);
+    message.recipientLabel = input.recipientLabel;
+  }
+
+  if (input.subject !== undefined) {
+    pushChange("subject", message.subject, input.subject);
+    message.subject = input.subject;
+  }
+
+  if (input.body !== undefined) {
+    pushChange("body", message.body, input.body);
+    message.body = input.body;
+  }
+
+  if (input.assignee !== undefined) {
+    pushChange("assignee", message.assignee, input.assignee);
+    message.assignee = input.assignee;
+  }
+
+  if (input.distribution !== undefined) {
+    pushChange("distribution", message.distribution, input.distribution);
+    message.distribution = input.distribution;
+  }
+
+  if (input.notes !== undefined) {
+    pushChange("notes", message.notes, input.notes);
+    message.notes = input.notes;
+  }
+
+  message.updatedAt = new Date().toISOString();
+  message.updatedBy = updatedBy;
+
+  if (changes.length > 0) {
+    const history = messageHistory.get(message.id) ?? [];
+    history.unshift({
+      id: `message-audit-${message.id}-${history.length + 1}`,
+      messageId: message.id,
+      incidentId,
+      action: "updated",
+      summary:
+        changes.length === 1 && changes[0]?.field === "status"
+          ? `Statuswechsel von ${changes[0].from} zu ${changes[0].to}.`
+          : changes.length === 1 && changes[0]?.field === "assignee"
+            ? `Zuweisung von ${changes[0].from ?? "offen"} zu ${changes[0].to ?? "offen"}.`
+            : `Nachricht aktualisiert: ${changes.map((entry) => entry.field).join(", ")}.`,
+      createdAt: message.updatedAt,
+      actor: resolveUserDisplayName(updatedBy),
+      changes
+    });
+    messageHistory.set(message.id, history);
+  }
+
+  return message;
 }

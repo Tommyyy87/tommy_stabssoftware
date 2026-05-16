@@ -5,7 +5,7 @@ export type MessagePriority = "niedrig" | "normal" | "hoch" | "sofort";
 export type MessageStatus =
   | "neu"
   | "gesichtet"
-  | "in Bearbeitung"
+  | "in_bearbeitung"
   | "weitergeleitet"
   | "erledigt";
 
@@ -57,7 +57,7 @@ export const messageStatuses: Array<MessageStatus | "alle"> = [
   "alle",
   "neu",
   "gesichtet",
-  "in Bearbeitung",
+  "in_bearbeitung",
   "weitergeleitet",
   "erledigt"
 ];
@@ -195,7 +195,7 @@ export const demoMessages: MessageRecord[] = [
     direction: "eingang",
     channel: "telefon",
     priority: "hoch",
-    status: "in Bearbeitung",
+    status: "in_bearbeitung",
     messageTime: "2026-05-16T10:42:00.000Z",
     recordedAt: "2026-05-16T10:44:00.000Z",
     senderLabel: "Polizei Einsatzleitung",
@@ -269,6 +269,30 @@ export function buildStatusSummary(messages: MessageRecord[]) {
     urgentCount: messages.filter((message) => message.priority === "sofort").length,
     outgoingCount: messages.filter((message) => message.direction === "ausgang").length
   };
+}
+
+export function getMessageStatusLabel(status: MessageStatus | "alle") {
+  switch (status) {
+    case "in_bearbeitung":
+      return "in Bearbeitung";
+    default:
+      return status;
+  }
+}
+
+export function getMessagePriorityLabel(priority: MessagePriority | "alle") {
+  return priority;
+}
+
+export function getMessageDirectionLabel(direction: MessageDirection | "alle") {
+  switch (direction) {
+    case "eingang":
+      return "Eingang";
+    case "ausgang":
+      return "Ausgang";
+    default:
+      return direction;
+  }
 }
 
 export function createLocalMessage(input: {

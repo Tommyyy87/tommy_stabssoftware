@@ -11,6 +11,14 @@ export class IncidentsController {
     return this.incidentsService.list();
   }
 
+  @Get(":incidentId/history")
+  history(
+    @Param("incidentId") incidentId: string,
+    @Headers("authorization") authorizationHeader?: string
+  ) {
+    return this.incidentsService.listHistory(incidentId, authorizationHeader);
+  }
+
   @Post()
   create(
     @Body() body: CreateIncidentInput,

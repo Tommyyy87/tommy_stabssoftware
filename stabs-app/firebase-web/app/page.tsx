@@ -1,5 +1,5 @@
+import Link from "next/link";
 import { loadApiSnapshot } from "../lib/api";
-import { MessageCenter } from "./message-center";
 import { OperationsConsole } from "./operations-console";
 
 export const dynamic = "force-dynamic";
@@ -15,9 +15,9 @@ const milestones = [
 const foundationModules = [
   "Getrennte Web-Deploy-App fuer Firebase App Hosting",
   "Health-Endpunkt im Backend",
-  "Demo-Login fuer MVP 0.1",
-  "Rollen- und Berechtigungsgrundlage",
-  "Erste Lage-API mit In-Memory-Startdaten"
+  "Persistenter Incident-Kern mit Audit-Ausbau",
+  "Demo-Login auf erweitertem Rollenpfad",
+  "Erste fachliche Modulroute fuer Nachrichten"
 ];
 
 export default async function HomePage() {
@@ -43,8 +43,6 @@ export default async function HomePage() {
         </ul>
       </section>
 
-      <MessageCenter />
-
       <section className="panel grid-panel">
         <div>
           <h2>Technisches Fundament</h2>
@@ -60,6 +58,23 @@ export default async function HomePage() {
           <p>`POST /api/auth/login` mit `admin / demo`</p>
           <p>`GET /api/incidents` fuer die erste Lageuebersicht</p>
           <p>API-Ziel: `{apiSnapshot.baseUrl || "nicht gesetzt"}`</p>
+        </div>
+      </section>
+
+      <section className="panel module-panel">
+        <div className="message-section-header">
+          <div>
+            <p className="eyebrow">Moduleinstieg</p>
+            <h2>Facharbeit nicht auf der Startseite</h2>
+            <p className="lead">
+              Die eigentliche Nachrichtenarbeit liegt jetzt auf einer eigenen
+              Route, damit die Startseite Ueberblick bleibt und nicht in eine
+              einzige Scrollflaeche kippt.
+            </p>
+          </div>
+          <Link className="primary-button" href="/messages">
+            Nachrichtenmodul oeffnen
+          </Link>
         </div>
       </section>
 

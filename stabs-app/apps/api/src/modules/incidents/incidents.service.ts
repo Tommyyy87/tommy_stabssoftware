@@ -8,6 +8,7 @@ import {
 import {
   CreateIncidentInput,
   INCIDENT_STORE,
+  IncidentHistoryEntry,
   IncidentStatus,
   IncidentStore,
   UpdateIncidentInput
@@ -32,8 +33,27 @@ export class IncidentsService {
     return this.incidentStore.list();
   }
 
+  async listHistory(incidentId: string, authorizationHeader: string | undefined) {
+    const session = await this.authService.getPermissionsForCurrentUser(authorizationHeader);
+
+    if (
+      !session.permissions.includes("audit.read") &&
+      !session.permissions.includes("incidents.read")
+    ) {
+      throw new ForbiddenException("Keine Berechtigung zum Lesen des Verlaufs.");
+    }
+
+    const history = await this.incidentStore.listHistory(incidentId);
+
+    if (!history) {
+      throw new NotFoundException("Lage nicht gefunden.");
+    }
+
+    return history;
+  }
+
   async create(input: CreateIncidentInput, authorizationHeader: string | undefined) {
-    const session = this.authService.getPermissionsForCurrentUser(authorizationHeader);
+    const session = await this.authService.getPermissionsForCurrentUser(authorizationHeader);
 
     if (!session.permissions.includes("incidents.create")) {
       throw new ForbiddenException("Keine Berechtigung zum Anlegen von Lagen.");
@@ -53,7 +73,7 @@ export class IncidentsService {
     input: UpdateIncidentInput,
     authorizationHeader: string | undefined
   ) {
-    const session = this.authService.getPermissionsForCurrentUser(authorizationHeader);
+    const session = await this.authService.getPermissionsForCurrentUser(authorizationHeader);
 
     if (!session.permissions.includes("incidents.update")) {
       throw new ForbiddenException("Keine Berechtigung zum Bearbeiten von Lagen.");
@@ -84,7 +104,11 @@ export class IncidentsService {
       throw new BadRequestException("Keine gueltigen Aenderungen uebergeben.");
     }
 
-    const updatedIncident = await this.incidentStore.update(incidentId, normalizedInput);
+    const updatedIncident = await this.incidentStore.update(
+      incidentId,
+      normalizedInput,
+      session.user.id
+    );
 
     if (!updatedIncident) {
       throw new NotFoundException("Lage nicht gefunden.");

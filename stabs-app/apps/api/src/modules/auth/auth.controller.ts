@@ -11,12 +11,12 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post("login")
-  login(@Body() body: LoginBody) {
+  async login(@Body() body: LoginBody) {
     return this.authService.login(body.username ?? "", body.password ?? "");
   }
 
   @Get("me")
-  me(@Headers("authorization") authorizationHeader?: string) {
+  async me(@Headers("authorization") authorizationHeader?: string) {
     return this.authService.getPermissionsForCurrentUser(authorizationHeader);
   }
 }

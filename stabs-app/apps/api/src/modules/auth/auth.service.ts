@@ -1,30 +1,30 @@
-import { Injectable, UnauthorizedException } from "@nestjs/common";
-import {
-  createSession,
-  getPermissionsForRoles,
-  getSeededUsers,
-  getSession
-} from "../../shared/demo-store";
+import { Inject, Injectable, UnauthorizedException } from "@nestjs/common";
+import { AUTH_STORE, AuthStore } from "./auth.store";
 
 @Injectable()
 export class AuthService {
-  login(username: string, password: string) {
-    const user = getSeededUsers().find((entry) => entry.username === username);
+  constructor(@Inject(AUTH_STORE) private readonly authStore: AuthStore) {}
 
-    if (!user || password !== "demo") {
+  async login(username: string, password: string) {
+    const session = await this.authStore.login(username, password);
+
+    if (!session) {
       throw new UnauthorizedException("Ungueltige Demo-Anmeldedaten.");
     }
 
-    return createSession(user);
+    return {
+      token: session.token,
+      user: session.user
+    };
   }
 
-  resolveSession(authorizationHeader: string | undefined) {
+  async resolveSession(authorizationHeader: string | undefined) {
     const token = authorizationHeader?.replace("Bearer ", "").trim();
-    return getSession(token);
+    return this.authStore.resolveSession(token);
   }
 
-  getPermissionsForCurrentUser(authorizationHeader: string | undefined) {
-    const session = this.resolveSession(authorizationHeader);
+  async getPermissionsForCurrentUser(authorizationHeader: string | undefined) {
+    const session = await this.resolveSession(authorizationHeader);
 
     if (!session) {
       throw new UnauthorizedException("Keine gueltige Sitzung vorhanden.");
@@ -32,7 +32,7 @@ export class AuthService {
 
     return {
       user: session.user,
-      permissions: getPermissionsForRoles(session.user.roles)
+      permissions: session.permissions
     };
   }
 }

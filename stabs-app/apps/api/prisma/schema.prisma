@@ -14,6 +14,88 @@ enum IncidentStatus {
   archived
 }
 
+enum IncidentAuditAction {
+  created
+  updated
+}
+
+enum MessageDirection {
+  eingang
+  ausgang
+}
+
+enum MessageChannel {
+  funk
+  telefon
+  email
+  melder
+  lagekontakt
+}
+
+enum MessagePriority {
+  niedrig
+  normal
+  hoch
+  sofort
+}
+
+enum MessageStatus {
+  neu
+  gesichtet
+  in_bearbeitung
+  weitergeleitet
+  erledigt
+}
+
+enum MessageAuditAction {
+  created
+  updated
+}
+
+model User {
+  id               String               @id
+  username         String               @unique
+  displayName      String
+  passwordHash     String
+  passwordSalt     String
+  createdAt        DateTime             @default(now())
+  roles            UserRole[]
+  sessions         AuthSession[]
+  incidentsCreated Incident[]           @relation("IncidentCreator")
+  incidentAudits   IncidentAuditEntry[] @relation("IncidentAuditActor")
+  messagesCreated  Message[]            @relation("MessageCreator")
+  messagesUpdated  Message[]            @relation("MessageUpdater")
+  messageAudits    MessageAuditEntry[]  @relation("MessageAuditActor")
+}
+
+model Role {
+  key         String   @id
+  displayName String
+  permissions String[]
+  users       UserRole[]
+}
+
+model UserRole {
+  userId     String
+  roleKey    String
+  assignedAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       Role     @relation(fields: [roleKey], references: [key], onDelete: Cascade)
+
+  @@id([userId, roleKey])
+  @@index([roleKey])
+}
+
+model AuthSession {
+  token     String   @id
+  userId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt(sort: Desc)])
+  @@index([userId])
+}
+
 model Incident {
   id              String         @id
   title           String
@@ -21,6 +103,71 @@ model Incident {
   status          IncidentStatus @default(draft)
   createdAt       DateTime       @default(now())
   createdByUserId String
+  createdBy       User           @relation("IncidentCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  auditEntries    IncidentAuditEntry[]
+  messages        Message[]
+  messageAudits   MessageAuditEntry[]
 
   @@index([createdAt(sort: Desc)])
+}
+
+model IncidentAuditEntry {
+  id            String              @id
+  incidentId    String
+  actorUserId   String
+  action        IncidentAuditAction
+  summary       String
+  changes       Json
+  createdAt     DateTime            @default(now())
+  actorUser     User                @relation("IncidentAuditActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  incident      Incident            @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([incidentId, createdAt(sort: Desc)])
+}
+
+model Message {
+  id              String           @id
+  incidentId      String
+  trackingNumber  String
+  direction       MessageDirection
+  channel         MessageChannel
+  priority        MessagePriority
+  status          MessageStatus    @default(neu)
+  messageTime     DateTime
+  recordedAt      DateTime
+  senderLabel     String
+  recipientLabel  String
+  subject         String
+  body            String
+  assignee        String
+  distribution    String
+  notes           String
+  createdAt       DateTime         @default(now())
+  createdByUserId String
+  updatedAt       DateTime         @default(now())
+  updatedByUserId String
+  incident        Incident         @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  createdBy       User             @relation("MessageCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  updatedBy       User             @relation("MessageUpdater", fields: [updatedByUserId], references: [id], onDelete: Restrict)
+  auditEntries    MessageAuditEntry[]
+
+  @@unique([incidentId, trackingNumber])
+  @@index([incidentId, messageTime(sort: Desc)])
+  @@index([updatedAt(sort: Desc)])
+}
+
+model MessageAuditEntry {
+  id          String             @id
+  incidentId  String
+  messageId   String
+  actorUserId String
+  action      MessageAuditAction
+  summary     String
+  changes     Json
+  createdAt   DateTime           @default(now())
+  incident    Incident           @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  message     Message            @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  actorUser   User               @relation("MessageAuditActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([incidentId, messageId, createdAt(sort: Desc)])
 }

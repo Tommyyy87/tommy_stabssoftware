@@ -710,3 +710,11 @@ Noch offen bis zum naechsten funktionalen Meilenstein:
 - neue `Nachrichtenzentrale` als eingangsorientierte Arbeitsflaeche fuer Sichtung, Priorisierung, Zuweisung und Bearbeitungsspur umgesetzt.
 - Tablet-/Desktop-geeignetes List-Detail-Layout mit interaktiver lokaler Vorschau fuer neue Nachrichten eingebaut.
 - Doku und Spezifikation fuer den Frontend-Start des Nachrichtenmoduls nachgezogen.
+
+### Entwicklungsstand 2026-05-16-03
+
+- `messages`-Modul im Backend als naechster echter Fachkern angelegt.
+- Prisma-Schema um Nachrichten- und Nachrichten-Audit-Tabellen erweitert.
+- Incident-gebundene Message-Endpunkte fuer Liste, Anlage, Bearbeitung und Verlauf vorbereitet.
+- Nachrichten-Frontend aus der Startseite in eine eigene Route `/messages` ueberfuehrt.
+- Startseite bewusst wieder kompakter gehalten, damit Facharbeit nicht in einer einzigen Scrollseite endet.

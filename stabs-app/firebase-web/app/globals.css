@@ -199,7 +199,7 @@ h4 {
   color: #8b6400;
 }
 
-.status-in\ Bearbeitung,
+.status-in_bearbeitung,
 .status-active {
   background: var(--blue-soft);
   color: #184a73;
@@ -379,6 +379,12 @@ h4 {
   gap: 24px;
 }
 
+.hero-actions {
+  display: flex;
+  margin-top: 22px;
+  gap: 12px;
+}
+
 .message-center-lead {
   margin-bottom: 0;
 }
@@ -431,6 +437,10 @@ h4 {
 .message-toolbar {
   margin-top: 28px;
   align-items: end;
+}
+
+.module-panel {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(245, 248, 252, 0.98));
 }
 
 .toolbar-search {

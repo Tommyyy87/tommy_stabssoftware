@@ -12,10 +12,11 @@ Zum Stand `2026-05-16` ist der erste echte Online-Kern live. Zusaetzlich liegt e
 - Backend live ueber Google Cloud Run
 - Frontend zeigt echten Backend-Status
 - Frontend erlaubt Login, Benutzerstatus und Lagearbeit
-- Frontend enthaelt jetzt zusaetzlich eine erste sichtbare Nachrichtenzentrale als Frontend-Vorstufe
+- Frontend enthaelt jetzt zusaetzlich eine eigene Route `/messages` fuer die Nachrichtenzentrale
 - Incident-Daten liegen persistent in PostgreSQL ueber Cloud SQL
 - Audit-/Historienlogik fuer Lagen ist im Code umgesetzt, aber noch nicht als Live-Stand nachverifiziert
 - persistente Benutzer-, Rollen- und Session-Daten sind im Code umgesetzt, aber noch nicht als Live-Stand nachverifiziert
+- Nachrichten-Persistenz und Message-Audit sind im Code umgesetzt, aber noch nicht als Live-Stand nachverifiziert
 
 Damit ist das Projekt nicht mehr nur ein online sichtbarer Demo-Kern, sondern hat jetzt auch eine erste dauerhafte Datenbasis fuer die Lageverwaltung.
 
@@ -99,6 +100,7 @@ Zusatz fuer den lokalen, noch nicht live nachverifizierten Code-Stand:
 - API-Build und API-Tests fuer Auth-/Audit-Erweiterung laufen lokal erfolgreich.
 - Frontend-Typecheck, Frontend-Tests und Frontend-Build fuer Historienansicht laufen lokal erfolgreich.
 - Frontend-Typecheck, Frontend-Tests und Frontend-Build fuer die erste Nachrichtenzentrale laufen lokal erfolgreich.
+- API-Build, API-Tests, Frontend-Typecheck, Frontend-Tests und Frontend-Build fuer den echten `messages`-Pfad laufen lokal erfolgreich.
 
 ## 9. Zeitlinie
 
@@ -135,6 +137,13 @@ Zusatz fuer den lokalen, noch nicht live nachverifizierten Code-Stand:
 - eingangsorientierte Nachrichtenzentrale mit Listenbereich, Detailbereich, Such-/Statusfiltern und lokaler Erfassungslogik eingebaut.
 - diese Stufe ist bewusst noch kein live verifizierter Message-Backend-Stand, sondern eine sichtbar nutzbare Frontend-Vorstufe fuer die weitere Fachiteration.
 
+### 2026-05-16-03
+
+- neues Backend-Modul `messages` mit Incident-Bezug, Persistenzpfad und Audit-Modell vorbereitet.
+- Prisma-Schema und neue Migration fuer `Message` und `MessageAuditEntry` angelegt.
+- Frontend auf eigene Modulroute `/messages` umgestellt und an echte Message-Endpunkte angebunden.
+- Startseite verschlankt, damit die eigentliche Nachrichtenarbeit nicht als Single-Page-Block weiterwachsen muss.
+
 ## 10. Letzte relevante Commits
 
 - `d18c479` `Add interactive incident workspace`
@@ -157,13 +166,13 @@ Bevor der neue Kern als echter Betriebsstand gelten kann, sind diese Schritte er
 
 1. neue Prisma-Migration in Cloud SQL deployen
 2. Backend als neue Cloud-Run-Revision deployen
-3. Frontend-Deploy fuer die Historienansicht durchziehen
-4. Login, Session, Incident-Anlage, Incident-Bearbeitung und Verlauf gegen den Live-Stand gezielt nachverifizieren
+3. Frontend-Deploy fuer Historienansicht und `/messages`-Route durchziehen
+4. Login, Session, Incident-Anlage, Incident-Bearbeitung, Nachrichtenliste, Nachrichtenerfassung und Nachrichtenhistorie gegen den Live-Stand gezielt nachverifizieren
 
 Danach ist die naechste Entwicklungsstufe:
 
 1. lagebezogene Mitgliedschaften und feinere Rollen-/Rechtepruefung anschliessen
-2. Nachrichten und Tagebuch auf demselben persistenten Kern aufbauen und die neue Frontend-Nachrichtenzentrale an echte Message-Endpunkte anbinden
+2. Tagebuch direkt auf demselben persistenten Incident-/Message-Kern aufbauen
 3. danach weitere Fachmodule auf denselben persistenten Kern setzen
 
 ## 13. Entwicklungsstand 2026-05-15-02

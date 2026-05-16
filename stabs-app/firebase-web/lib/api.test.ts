@@ -3,9 +3,14 @@ import test from "node:test";
 
 import {
   createIncident,
+  createMessage,
+  getIncidentHistory,
+  getMessageHistory,
+  listMessages,
   loadApiSnapshot,
   loginWithDemoCredentials,
   readCurrentUser,
+  updateMessage,
   updateIncident
 } from "./api";
 
@@ -245,4 +250,292 @@ test("updateIncident patches incident fields with authorization", async () => {
     })
   });
   assert.equal(incident.status, "active");
+});
+
+test("getIncidentHistory reads the incident history with authorization", async () => {
+  let request: { url: string; method?: string; authorization?: string } | null = null;
+
+  const history = await getIncidentHistory({
+    baseUrl: "https://example.test",
+    token: "session-user-admin",
+    incidentId: "incident-002",
+    fetchImpl: async (input, init) => {
+      request = {
+        url: String(input),
+        method: init?.method,
+        authorization: String((init?.headers as Record<string, string>)?.authorization)
+      };
+
+      return {
+        ok: true,
+        async json() {
+          return [
+            {
+              id: "audit-2",
+              incidentId: "incident-002",
+              action: "updated",
+              summary: "Statuswechsel von draft zu active.",
+              createdAt: "2026-05-15T08:10:00.000Z",
+              actor: "System Admin",
+              changes: [
+                {
+                  field: "status",
+                  from: "draft",
+                  to: "active"
+                }
+              ]
+            }
+          ];
+        }
+      } as Response;
+    }
+  });
+
+  assert.deepEqual(request, {
+    url: "https://example.test/api/incidents/incident-002/history",
+    method: "GET",
+    authorization: "Bearer session-user-admin"
+  });
+  assert.equal(history[0]?.changes[0]?.field, "status");
+});
+
+test("listMessages reads incident-scoped messages", async () => {
+  let requestUrl = "";
+
+  const messages = await listMessages({
+    baseUrl: "https://example.test",
+    incidentId: "incident-001",
+    token: "session-user-admin",
+    fetchImpl: async (input, init) => {
+      requestUrl = String(input);
+      assert.equal(
+        String((init?.headers as Record<string, string>)?.authorization),
+        "Bearer session-user-admin"
+      );
+
+      return {
+        ok: true,
+        async json() {
+          return [
+            {
+              id: "message-001",
+              incidentId: "incident-001",
+              trackingNumber: "E-240516-001",
+              direction: "eingang",
+              channel: "funk",
+              priority: "sofort",
+              status: "neu",
+              messageTime: "2026-05-16T11:45:00.000Z",
+              recordedAt: "2026-05-16T11:47:00.000Z",
+              senderLabel: "Abschnitt Nord",
+              recipientLabel: "Stabsraum S2/S3",
+              subject: "Evakuierung vorbereiten",
+              body: "Winddreher nach Ost.",
+              assignee: "S3 Einsatz",
+              distribution: "S2, S3",
+              notes: "Quittierung ausstehend.",
+              createdAt: "2026-05-16T11:47:00.000Z",
+              createdBy: "System Admin",
+              updatedAt: "2026-05-16T11:47:00.000Z",
+              updatedBy: "System Admin"
+            }
+          ];
+        }
+      } as Response;
+    }
+  });
+
+  assert.equal(
+    requestUrl,
+    "https://example.test/api/incidents/incident-001/messages"
+  );
+  assert.equal(messages[0]?.trackingNumber, "E-240516-001");
+});
+
+test("createMessage posts a new incident-scoped message", async () => {
+  let request:
+    | { url: string; method?: string; authorization?: string; body?: string }
+    | null = null;
+
+  const message = await createMessage({
+    baseUrl: "https://example.test",
+    incidentId: "incident-001",
+    token: "session-user-admin",
+    input: {
+      direction: "eingang",
+      channel: "telefon",
+      priority: "hoch",
+      messageTime: "2026-05-16T12:00:00.000Z",
+      senderLabel: "Abschnitt Nord",
+      recipientLabel: "Stab",
+      subject: "Rauchentwicklung Osthang",
+      body: "Neue Lage"
+    },
+    fetchImpl: async (input, init) => {
+      request = {
+        url: String(input),
+        method: init?.method,
+        authorization: String((init?.headers as Record<string, string>)?.authorization),
+        body: String(init?.body)
+      };
+
+      return {
+        ok: true,
+        async json() {
+          return {
+            id: "message-002",
+            incidentId: "incident-001",
+            trackingNumber: "E-240516-002",
+            direction: "eingang",
+            channel: "telefon",
+            priority: "hoch",
+            status: "neu",
+            messageTime: "2026-05-16T12:00:00.000Z",
+            recordedAt: "2026-05-16T12:01:00.000Z",
+            senderLabel: "Abschnitt Nord",
+            recipientLabel: "Stab",
+            subject: "Rauchentwicklung Osthang",
+            body: "Neue Lage",
+            assignee: "Sichtung offen",
+            distribution: "offen",
+            notes: "",
+            createdAt: "2026-05-16T12:01:00.000Z",
+            createdBy: "System Admin",
+            updatedAt: "2026-05-16T12:01:00.000Z",
+            updatedBy: "System Admin"
+          };
+        }
+      } as Response;
+    }
+  });
+
+  assert.deepEqual(request, {
+    url: "https://example.test/api/incidents/incident-001/messages",
+    method: "POST",
+    authorization: "Bearer session-user-admin",
+    body: JSON.stringify({
+      direction: "eingang",
+      channel: "telefon",
+      priority: "hoch",
+      messageTime: "2026-05-16T12:00:00.000Z",
+      senderLabel: "Abschnitt Nord",
+      recipientLabel: "Stab",
+      subject: "Rauchentwicklung Osthang",
+      body: "Neue Lage"
+    })
+  });
+  assert.equal(message.id, "message-002");
+});
+
+test("updateMessage patches one incident-scoped message", async () => {
+  let request:
+    | { url: string; method?: string; authorization?: string; body?: string }
+    | null = null;
+
+  const message = await updateMessage({
+    baseUrl: "https://example.test",
+    incidentId: "incident-001",
+    messageId: "message-001",
+    token: "session-user-admin",
+    input: {
+      status: "weitergeleitet",
+      assignee: "S5 Presse"
+    },
+    fetchImpl: async (input, init) => {
+      request = {
+        url: String(input),
+        method: init?.method,
+        authorization: String((init?.headers as Record<string, string>)?.authorization),
+        body: String(init?.body)
+      };
+
+      return {
+        ok: true,
+        async json() {
+          return {
+            id: "message-001",
+            incidentId: "incident-001",
+            trackingNumber: "E-240516-001",
+            direction: "eingang",
+            channel: "funk",
+            priority: "sofort",
+            status: "weitergeleitet",
+            messageTime: "2026-05-16T11:45:00.000Z",
+            recordedAt: "2026-05-16T11:47:00.000Z",
+            senderLabel: "Abschnitt Nord",
+            recipientLabel: "Stabsraum S2/S3",
+            subject: "Evakuierung vorbereiten",
+            body: "Winddreher nach Ost.",
+            assignee: "S5 Presse",
+            distribution: "S2, S3",
+            notes: "Quittierung ausstehend.",
+            createdAt: "2026-05-16T11:47:00.000Z",
+            createdBy: "System Admin",
+            updatedAt: "2026-05-16T11:55:00.000Z",
+            updatedBy: "System Admin"
+          };
+        }
+      } as Response;
+    }
+  });
+
+  assert.deepEqual(request, {
+    url: "https://example.test/api/incidents/incident-001/messages/message-001",
+    method: "PATCH",
+    authorization: "Bearer session-user-admin",
+    body: JSON.stringify({
+      status: "weitergeleitet",
+      assignee: "S5 Presse"
+    })
+  });
+  assert.equal(message.assignee, "S5 Presse");
+});
+
+test("getMessageHistory reads the message history with authorization", async () => {
+  let request: { url: string; method?: string; authorization?: string } | null = null;
+
+  const history = await getMessageHistory({
+    baseUrl: "https://example.test",
+    incidentId: "incident-001",
+    messageId: "message-001",
+    token: "session-user-admin",
+    fetchImpl: async (input, init) => {
+      request = {
+        url: String(input),
+        method: init?.method,
+        authorization: String((init?.headers as Record<string, string>)?.authorization)
+      };
+
+      return {
+        ok: true,
+        async json() {
+          return [
+            {
+              id: "message-audit-001",
+              messageId: "message-001",
+              incidentId: "incident-001",
+              action: "updated",
+              summary: "Statuswechsel von neu zu weitergeleitet.",
+              createdAt: "2026-05-16T11:55:00.000Z",
+              actor: "System Admin",
+              changes: [
+                {
+                  field: "status",
+                  from: "neu",
+                  to: "weitergeleitet"
+                }
+              ]
+            }
+          ];
+        }
+      } as Response;
+    }
+  });
+
+  assert.deepEqual(request, {
+    url: "https://example.test/api/incidents/incident-001/messages/message-001/history",
+    method: "GET",
+    authorization: "Bearer session-user-admin"
+  });
+  assert.equal(history[0]?.changes[0]?.field, "status");
 });

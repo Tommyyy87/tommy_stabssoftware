@@ -5,8 +5,10 @@ import {
   ApiSnapshot,
   AuthSession,
   CurrentUserSnapshot,
+  IncidentHistoryEntry,
   IncidentSnapshot,
   createIncident,
+  getIncidentHistory,
   listIncidents,
   loginWithDemoCredentials,
   readCurrentUser,
@@ -37,6 +39,13 @@ type EditFormState = {
   status: string;
 } | null;
 
+type IncidentHistoryState = {
+  visible: boolean;
+  loading: boolean;
+  error: string | null;
+  entries: IncidentHistoryEntry[];
+};
+
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("de-DE", {
     dateStyle: "short",
@@ -62,6 +71,9 @@ export function OperationsConsole({ initialSnapshot }: OperationsConsoleProps) {
     error: null
   });
   const [incidents, setIncidents] = useState(initialSnapshot.incidents);
+  const [incidentHistory, setIncidentHistory] = useState<
+    Record<string, IncidentHistoryState>
+  >({});
   const [incidentFeedback, setIncidentFeedback] = useState<string | null>(null);
   const [refreshError, setRefreshError] = useState<string | null>(initialSnapshot.error);
   const [isPending, startTransition] = useTransition();
@@ -70,6 +82,8 @@ export function OperationsConsole({ initialSnapshot }: OperationsConsoleProps) {
   const permissions = authState.currentUser?.permissions ?? [];
   const canCreate = permissions.includes("incidents.create");
   const canUpdate = permissions.includes("incidents.update");
+  const canReadHistory =
+    permissions.includes("audit.read") || permissions.includes("incidents.read");
 
   const sortedIncidents = useMemo(
     () =>
@@ -176,6 +190,7 @@ export function OperationsConsole({ initialSnapshot }: OperationsConsoleProps) {
       error: null
     });
     setEditForm(null);
+    setIncidentHistory({});
     setIncidentFeedback(null);
   }
 
@@ -230,12 +245,90 @@ export function OperationsConsole({ initialSnapshot }: OperationsConsoleProps) {
             incident.id === updatedIncident.id ? updatedIncident : incident
           )
         );
+        setIncidentHistory((current) => {
+          const next = { ...current };
+          delete next[updatedIncident.id];
+          return next;
+        });
         setEditForm(null);
         setIncidentFeedback(`Lage ${updatedIncident.referenceNumber} wurde aktualisiert.`);
       });
     } catch (error) {
       startTransition(() => {
         setIncidentFeedback(getErrorMessage(error));
+      });
+    }
+  }
+
+  async function handleToggleHistory(incidentId: string) {
+    const currentHistory = incidentHistory[incidentId];
+
+    if (currentHistory?.visible) {
+      setIncidentHistory((current) => ({
+        ...current,
+        [incidentId]: {
+          ...currentHistory,
+          visible: false
+        }
+      }));
+      return;
+    }
+
+    if (currentHistory && currentHistory.entries.length > 0) {
+      setIncidentHistory((current) => ({
+        ...current,
+        [incidentId]: {
+          ...currentHistory,
+          visible: true,
+          error: null
+        }
+      }));
+      return;
+    }
+
+    if (!authState.session) {
+      return;
+    }
+
+    setIncidentHistory((current) => ({
+      ...current,
+      [incidentId]: {
+        visible: true,
+        loading: true,
+        error: null,
+        entries: current[incidentId]?.entries ?? []
+      }
+    }));
+
+    try {
+      const entries = await getIncidentHistory({
+        baseUrl: initialSnapshot.baseUrl,
+        token: authState.session.token,
+        incidentId
+      });
+
+      startTransition(() => {
+        setIncidentHistory((current) => ({
+          ...current,
+          [incidentId]: {
+            visible: true,
+            loading: false,
+            error: null,
+            entries
+          }
+        }));
+      });
+    } catch (error) {
+      startTransition(() => {
+        setIncidentHistory((current) => ({
+          ...current,
+          [incidentId]: {
+            visible: true,
+            loading: false,
+            error: getErrorMessage(error),
+            entries: current[incidentId]?.entries ?? []
+          }
+        }));
       });
     }
   }
@@ -387,6 +480,18 @@ export function OperationsConsole({ initialSnapshot }: OperationsConsoleProps) {
                     Angelegt: {formatDate(incident.createdAt)} von {incident.createdBy}
                   </p>
 
+                  {canReadHistory ? (
+                    <button
+                      className="ghost-button"
+                      onClick={() => void handleToggleHistory(incident.id)}
+                      type="button"
+                    >
+                      {incidentHistory[incident.id]?.visible
+                        ? "Verlauf ausblenden"
+                        : "Verlauf anzeigen"}
+                    </button>
+                  ) : null}
+
                   {canUpdate ? (
                     isEditing ? (
                       <form className="stack compact-stack" onSubmit={handleUpdateIncident}>
@@ -463,6 +568,41 @@ export function OperationsConsole({ initialSnapshot }: OperationsConsoleProps) {
                         Lage bearbeiten
                       </button>
                     )
+                  ) : null}
+
+                  {incidentHistory[incident.id]?.visible ? (
+                    <div className="history-panel">
+                      <h5>Verlauf</h5>
+
+                      {incidentHistory[incident.id]?.loading ? (
+                        <p className="muted-text">Verlauf wird geladen...</p>
+                      ) : null}
+
+                      {incidentHistory[incident.id]?.error ? (
+                        <p className="error-text">{incidentHistory[incident.id]?.error}</p>
+                      ) : null}
+
+                      <div className="history-list">
+                        {incidentHistory[incident.id]?.entries.map((entry) => (
+                          <article className="history-entry" key={entry.id}>
+                            <div className="history-entry-header">
+                              <strong>{entry.summary}</strong>
+                              <span className="muted-text">{formatDate(entry.createdAt)}</span>
+                            </div>
+                            <p className="muted-text">
+                              {entry.actor} · {entry.action}
+                            </p>
+                            <ul className="history-change-list">
+                              {entry.changes.map((change, index) => (
+                                <li key={`${entry.id}-${change.field}-${index}`}>
+                                  {change.field}: {change.from ?? "leer"} → {change.to ?? "leer"}
+                                </li>
+                              ))}
+                            </ul>
+                          </article>
+                        ))}
+                      </div>
+                    </div>
                   ) : null}
                 </article>
               );

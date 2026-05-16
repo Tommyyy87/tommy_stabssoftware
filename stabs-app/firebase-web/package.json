@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test app/page.test.ts lib/api.test.ts lib/message-center.test.ts"
+    "test": "tsx --test app/page.test.ts app/messages/page.test.ts lib/api.test.ts lib/message-center.test.ts"
   },
   "dependencies": {
     "next": "15.2.9",

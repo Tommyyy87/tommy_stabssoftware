@@ -115,3 +115,22 @@ wird das Nachrichtenmodul jetzt bewusst in zwei Stufen begonnen:
 Diese Trennung ist absichtlich so gewaehlt, damit die fachliche Oberflaeche frueh
 sichtbar und iterierbar wird, ohne den noch ausstehenden Live-Rollout der
 Auth-/Audit-Erweiterung abzuwarten.
+
+## 11. Nachrichtenmodul jetzt als eigener echter Systempfad
+
+Zum Stand `2026-05-16-03` ist der Nachrichtenpfad nicht mehr nur Mock-Frontend:
+
+- Backend:
+  - neues Modul `messages`
+  - eigene Store-Abstraktion analog zum Incident-Kern
+  - Nachrichtentabelle plus Nachrichten-Audit-Tabelle im Prisma-Schema
+  - Incident-gebundene Endpunkte fuer Liste, Anlage, Bearbeitung und Verlauf
+- Frontend:
+  - neue Route `/messages`
+  - Login, Lageauswahl und API-gebundene Nachrichtenliste in einer eigenen Arbeitsflaeche
+  - Startseite bleibt bewusst Ueberblick und Einstieg
+
+Damit ist die Architektur jetzt klarer getrennt:
+
+- `/` fuer Ueberblick, Betriebsstatus und Kernzugang
+- `/messages` fuer konzentrierte Nachrichtenarbeit

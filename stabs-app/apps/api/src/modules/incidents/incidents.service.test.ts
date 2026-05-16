@@ -6,7 +6,7 @@ import { IncidentsService } from "./incidents.service";
 test("list returns the persisted incidents from the configured store", async () => {
   const service = new IncidentsService(
     {
-      getPermissionsForCurrentUser() {
+      async getPermissionsForCurrentUser() {
         return {
           user: {
             id: "user-admin"
@@ -49,7 +49,7 @@ test("create forwards the normalized incident to the configured store", async ()
 
   const service = new IncidentsService(
     {
-      getPermissionsForCurrentUser() {
+      async getPermissionsForCurrentUser() {
         return {
           user: {
             id: "user-admin"
@@ -99,7 +99,7 @@ test("create forwards the normalized incident to the configured store", async ()
 test("update returns not found when the configured store does not know the incident", async () => {
   const service = new IncidentsService(
     {
-      getPermissionsForCurrentUser() {
+      async getPermissionsForCurrentUser() {
         return {
           user: {
             id: "user-admin"
@@ -128,4 +128,96 @@ test("update returns not found when the configured store does not know the incid
     ),
     /Lage nicht gefunden/
   );
+});
+
+test("update forwards the editing user to the configured store", async () => {
+  let updatedByUserId = "";
+
+  const service = new IncidentsService(
+    {
+      async getPermissionsForCurrentUser() {
+        return {
+          user: {
+            id: "user-admin"
+          },
+          permissions: ["incidents.update"]
+        };
+      }
+    } as never,
+    {
+      async list() {
+        return [];
+      },
+      async update(
+        _incidentId: string,
+        _input: { status?: string },
+        actorUserId: string
+      ) {
+        updatedByUserId = actorUserId;
+
+        return {
+          id: "incident-db-2",
+          title: "Aktualisierte Lage",
+          referenceNumber: "DB-2026-002",
+          status: "active",
+          createdAt: "2026-05-15T00:16:00.000Z",
+          createdBy: "System Admin"
+        };
+      }
+    } as never
+  );
+
+  await service.update(
+    "incident-db-2",
+    {
+      status: "active"
+    },
+    "Bearer session-user-admin"
+  );
+
+  assert.equal(updatedByUserId, "user-admin");
+});
+
+test("listHistory returns the incident history from the configured store", async () => {
+  const service = new IncidentsService(
+    {
+      async getPermissionsForCurrentUser() {
+        return {
+          user: {
+            id: "user-admin"
+          },
+          permissions: ["audit.read"]
+        };
+      }
+    } as never,
+    {
+      async list() {
+        return [];
+      },
+      async listHistory() {
+        return [
+          {
+            id: "audit-1",
+            incidentId: "incident-db-1",
+            action: "updated",
+            summary: "Statuswechsel von draft zu active.",
+            createdAt: "2026-05-15T00:20:00.000Z",
+            actor: "System Admin",
+            changes: [
+              {
+                field: "status",
+                from: "draft",
+                to: "active"
+              }
+            ]
+          }
+        ];
+      }
+    } as never
+  );
+
+  const history = await service.listHistory("incident-db-1", "Bearer session-user-admin");
+
+  assert.equal(history.length, 1);
+  assert.equal(history[0]?.changes[0]?.field, "status");
 });

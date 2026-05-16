@@ -30,6 +30,80 @@ export type IncidentSnapshot = {
   createdBy: string;
 };
 
+export type IncidentHistoryChange = {
+  field: string;
+  from: string | null;
+  to: string | null;
+};
+
+export type IncidentHistoryEntry = {
+  id: string;
+  incidentId: string;
+  action: "created" | "updated";
+  summary: string;
+  createdAt: string;
+  actor: string;
+  changes: IncidentHistoryChange[];
+};
+
+export type MessageDirection = "eingang" | "ausgang";
+
+export type MessageChannel =
+  | "funk"
+  | "telefon"
+  | "email"
+  | "melder"
+  | "lagekontakt";
+
+export type MessagePriority = "niedrig" | "normal" | "hoch" | "sofort";
+
+export type MessageStatus =
+  | "neu"
+  | "gesichtet"
+  | "in_bearbeitung"
+  | "weitergeleitet"
+  | "erledigt";
+
+export type MessageSnapshot = {
+  id: string;
+  incidentId: string;
+  trackingNumber: string;
+  direction: MessageDirection;
+  channel: MessageChannel;
+  priority: MessagePriority;
+  status: MessageStatus;
+  messageTime: string;
+  recordedAt: string;
+  senderLabel: string;
+  recipientLabel: string;
+  subject: string;
+  body: string;
+  assignee: string;
+  distribution: string;
+  notes: string;
+  createdAt: string;
+  createdBy: string;
+  updatedAt: string;
+  updatedBy: string;
+};
+
+export type MessageHistoryChange = {
+  field: string;
+  from: string | null;
+  to: string | null;
+};
+
+export type MessageHistoryEntry = {
+  id: string;
+  messageId: string;
+  incidentId: string;
+  action: "created" | "updated";
+  summary: string;
+  createdAt: string;
+  actor: string;
+  changes: MessageHistoryChange[];
+};
+
 export type ApiSnapshot = {
   baseUrl: string;
   backendReachable: boolean;
@@ -68,6 +142,43 @@ type UpdateIncidentOptions = AuthenticatedRequestOptions & {
     referenceNumber?: string;
     status?: string;
   };
+};
+
+type IncidentHistoryOptions = AuthenticatedRequestOptions & {
+  incidentId: string;
+};
+
+type MessageListOptions = AuthenticatedRequestOptions & {
+  incidentId: string;
+};
+
+type CreateMessageOptions = AuthenticatedRequestOptions & {
+  incidentId: string;
+  input: {
+    direction: MessageDirection;
+    channel: MessageChannel;
+    priority: MessagePriority;
+    messageTime: string;
+    senderLabel: string;
+    recipientLabel: string;
+    subject: string;
+    body: string;
+  };
+};
+
+type UpdateMessageOptions = AuthenticatedRequestOptions & {
+  incidentId: string;
+  messageId: string;
+  input: {
+    status?: MessageStatus;
+    assignee?: string;
+    notes?: string;
+  };
+};
+
+type MessageHistoryOptions = AuthenticatedRequestOptions & {
+  incidentId: string;
+  messageId: string;
 };
 
 type LoginOptions = RequestOptions & {
@@ -232,6 +343,91 @@ export async function updateIncident(
       method: "PATCH",
       headers: createJsonHeaders(options.token),
       body: JSON.stringify(options.input)
+    },
+    fetchImpl
+  );
+}
+
+export async function getIncidentHistory(
+  options: IncidentHistoryOptions
+): Promise<IncidentHistoryEntry[]> {
+  const baseUrl = resolveBaseUrl(options.baseUrl);
+  const fetchImpl = options.fetchImpl ?? fetch;
+
+  return requestJson<IncidentHistoryEntry[]>(
+    `${baseUrl}/api/incidents/${options.incidentId}/history`,
+    {
+      method: "GET",
+      headers: createJsonHeaders(options.token),
+      cache: "no-store"
+    },
+    fetchImpl
+  );
+}
+
+export async function listMessages(
+  options: MessageListOptions
+): Promise<MessageSnapshot[]> {
+  const baseUrl = resolveBaseUrl(options.baseUrl);
+  const fetchImpl = options.fetchImpl ?? fetch;
+
+  return requestJson<MessageSnapshot[]>(
+    `${baseUrl}/api/incidents/${options.incidentId}/messages`,
+    {
+      method: "GET",
+      headers: createJsonHeaders(options.token),
+      cache: "no-store"
+    },
+    fetchImpl
+  );
+}
+
+export async function createMessage(
+  options: CreateMessageOptions
+): Promise<MessageSnapshot> {
+  const baseUrl = resolveBaseUrl(options.baseUrl);
+  const fetchImpl = options.fetchImpl ?? fetch;
+
+  return requestJson<MessageSnapshot>(
+    `${baseUrl}/api/incidents/${options.incidentId}/messages`,
+    {
+      method: "POST",
+      headers: createJsonHeaders(options.token),
+      body: JSON.stringify(options.input)
+    },
+    fetchImpl
+  );
+}
+
+export async function updateMessage(
+  options: UpdateMessageOptions
+): Promise<MessageSnapshot> {
+  const baseUrl = resolveBaseUrl(options.baseUrl);
+  const fetchImpl = options.fetchImpl ?? fetch;
+
+  return requestJson<MessageSnapshot>(
+    `${baseUrl}/api/incidents/${options.incidentId}/messages/${options.messageId}`,
+    {
+      method: "PATCH",
+      headers: createJsonHeaders(options.token),
+      body: JSON.stringify(options.input)
+    },
+    fetchImpl
+  );
+}
+
+export async function getMessageHistory(
+  options: MessageHistoryOptions
+): Promise<MessageHistoryEntry[]> {
+  const baseUrl = resolveBaseUrl(options.baseUrl);
+  const fetchImpl = options.fetchImpl ?? fetch;
+
+  return requestJson<MessageHistoryEntry[]>(
+    `${baseUrl}/api/incidents/${options.incidentId}/messages/${options.messageId}/history`,
+    {
+      method: "GET",
+      headers: createJsonHeaders(options.token),
+      cache: "no-store"
     },
     fetchImpl
   );
