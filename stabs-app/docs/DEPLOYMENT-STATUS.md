@@ -98,3 +98,16 @@ Zusatz:
 2. `journal` von der Einstiegsroute auf echte Datenuebernahme ausbauen
 3. lagebezogene Mitgliedschaften und feinere Rollen-/Rechtepruefung anschliessen
 4. weitere Fachmodule auf denselben persistenten Kern setzen
+
+## 11. Handoff fuer den naechsten Chat
+
+Fuer die naechste Session ist der technische Bezugspunkt:
+
+- `docs/NEXT-CHAT-HANDOFF.md`
+
+Dort stehen:
+
+- letzter verifizierter Commit
+- relevante Referenzdateien
+- naechste konkrete Entwicklungsschritte
+- Verifikations- und Rollout-Reihenfolge

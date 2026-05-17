@@ -76,3 +76,4 @@ Arbeitsverzeichnis: `stabs-app/firebase-web`
 
 - [ARCHITECTURE.md](./docs/ARCHITECTURE.md)
 - [DEPLOYMENT-STATUS.md](./docs/DEPLOYMENT-STATUS.md)
+- [NEXT-CHAT-HANDOFF.md](./docs/NEXT-CHAT-HANDOFF.md)
