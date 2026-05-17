@@ -507,6 +507,14 @@ h4 {
   margin-bottom: 0;
 }
 
+.workflow-strip {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-left: 22px;
+  line-height: 1.6;
+}
+
 .message-summary-grid {
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
 }

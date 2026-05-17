@@ -13,14 +13,15 @@ import {
   readCurrentUser,
   updateMessage
 } from "../../lib/api";
+import { filterVisibleMessages } from "../../lib/messages-view";
+import { MessageComposer } from "./_components/message-composer";
 import {
-  getMessageDirectionLabel,
-  getMessagePriorityLabel,
-  getMessageStatusLabel,
-  messageDirections,
-  messagePriorities,
-  messageStatuses
-} from "../../lib/message-center";
+  MessageFilters,
+  type MessageFiltersState
+} from "./_components/message-filters";
+import { MessageDetail } from "./_components/message-detail";
+import { MessageList } from "./_components/message-list";
+import { MessageWorkspaceHeader } from "./_components/message-workspace-header";
 
 const sessionStorageKey = "stabs-demo-session";
 
@@ -36,13 +37,6 @@ type AuthState = {
   session: AuthSession | null;
   currentUser: CurrentUserSnapshot | null;
   error: string | null;
-};
-
-type MessageFilters = {
-  query: string;
-  status: MessageSnapshot["status"] | "alle";
-  priority: MessageSnapshot["priority"] | "alle";
-  direction: MessageSnapshot["direction"] | "alle";
 };
 
 type MessageHistoryState = {
@@ -81,6 +75,19 @@ function nowForInput() {
   return utc.toISOString().slice(0, 16);
 }
 
+function createInitialComposer(): ComposerState {
+  return {
+    direction: "eingang",
+    channel: "telefon",
+    priority: "hoch",
+    messageTime: nowForInput(),
+    senderLabel: "",
+    recipientLabel: "Stabsraum S2/S3",
+    subject: "",
+    body: ""
+  };
+}
+
 export function MessagesWorkspace({
   baseUrl,
   backendReachable,
@@ -92,7 +99,7 @@ export function MessagesWorkspace({
     currentUser: null,
     error: null
   });
-  const [incidents, setIncidents] = useState(initialIncidents);
+  const [incidents] = useState(initialIncidents);
   const [selectedIncidentId, setSelectedIncidentId] = useState(
     initialIncidents[0]?.id ?? ""
   );
@@ -102,17 +109,8 @@ export function MessagesWorkspace({
     Record<string, MessageHistoryState>
   >({});
   const [composerOpen, setComposerOpen] = useState(false);
-  const [composer, setComposer] = useState<ComposerState>({
-    direction: "eingang",
-    channel: "telefon",
-    priority: "hoch",
-    messageTime: nowForInput(),
-    senderLabel: "",
-    recipientLabel: "Stabsraum S2/S3",
-    subject: "",
-    body: ""
-  });
-  const [filters, setFilters] = useState<MessageFilters>({
+  const [composer, setComposer] = useState<ComposerState>(createInitialComposer());
+  const [filters, setFilters] = useState<MessageFiltersState>({
     query: "",
     status: "alle",
     priority: "alle",
@@ -130,34 +128,10 @@ export function MessagesWorkspace({
   const canUpdate = permissions.includes("messages.update");
   const canReadHistory = permissions.includes("audit.read") || canRead;
 
-  const visibleMessages = useMemo(() => {
-    const needle = filters.query.trim().toLowerCase();
-
-    return messages
-      .filter((message) => {
-        const matchesStatus =
-          filters.status === "alle" || message.status === filters.status;
-        const matchesPriority =
-          filters.priority === "alle" || message.priority === filters.priority;
-        const matchesDirection =
-          filters.direction === "alle" || message.direction === filters.direction;
-        const matchesQuery =
-          needle.length === 0 ||
-          [
-            message.subject,
-            message.body,
-            message.senderLabel,
-            message.recipientLabel,
-            message.trackingNumber
-          ]
-            .join(" ")
-            .toLowerCase()
-            .includes(needle);
-
-        return matchesStatus && matchesPriority && matchesDirection && matchesQuery;
-      })
-      .sort((left, right) => right.messageTime.localeCompare(left.messageTime));
-  }, [filters, messages]);
+  const visibleMessages = useMemo(
+    () => filterVisibleMessages(messages, filters),
+    [filters, messages]
+  );
 
   const selectedMessage =
     visibleMessages.find((message) => message.id === selectedMessageId) ??
@@ -295,16 +269,7 @@ export function MessagesWorkspace({
         setMessages((current) => [created, ...current]);
         setSelectedMessageId(created.id);
         setComposerOpen(false);
-        setComposer({
-          direction: "eingang",
-          channel: "telefon",
-          priority: "hoch",
-          messageTime: nowForInput(),
-          senderLabel: "",
-          recipientLabel: "Stabsraum S2/S3",
-          subject: "",
-          body: ""
-        });
+        setComposer(createInitialComposer());
         setFeedback(`Nachricht ${created.trackingNumber} wurde erfasst.`);
       });
     } catch (error) {
@@ -425,42 +390,15 @@ export function MessagesWorkspace({
 
   return (
     <section className="panel message-center-panel">
-      <div className="message-center-topline">
-        <div>
-          <p className="eyebrow">Echter Datenpfad</p>
-          <h2>Nachrichtenzentrale auf eigener Modulroute</h2>
-          <p className="lead message-center-lead">
-            Nachrichten werden jetzt ueber Incident-gebundene Endpunkte geladen
-            und bearbeitet. Die Startseite bleibt dadurch kompakt, die
-            Nachrichtenarbeit konzentriert sich auf diese Route.
-          </p>
-        </div>
-
-        <div className="message-summary-grid">
-          <article className="summary-card emphasis-card">
-            <span className="summary-label">Backend</span>
-            <strong>{backendReachable ? "verbunden" : "nicht verbunden"}</strong>
-            <span className="summary-meta">{baseUrl || "keine API-URL gesetzt"}</span>
-          </article>
-          <article className="summary-card">
-            <span className="summary-label">Lagen</span>
-            <strong>{incidents.length}</strong>
-            <span className="summary-meta">fuer den Nachrichtenkontext sichtbar</span>
-          </article>
-          <article className="summary-card">
-            <span className="summary-label">Nachrichten</span>
-            <strong>{messages.length}</strong>
-            <span className="summary-meta">in der gewaehlten Lage geladen</span>
-          </article>
-          <article className="summary-card">
-            <span className="summary-label">Sitzung</span>
-            <strong>{authState.currentUser ? "aktiv" : "offen"}</strong>
-            <span className="summary-meta">
-              {authState.currentUser?.user.displayName ?? "Login erforderlich"}
-            </span>
-          </article>
-        </div>
-      </div>
+      <MessageWorkspaceHeader
+        backendReachable={backendReachable}
+        baseUrl={baseUrl}
+        incidentCount={incidents.length}
+        messageCount={messages.length}
+        sessionLabel={
+          authState.currentUser ? authState.currentUser.user.displayName : "offen"
+        }
+      />
 
       <div className="workspace-grid">
         <div className="stack">
@@ -538,453 +476,55 @@ export function MessagesWorkspace({
         </div>
 
         <div className="status-card">
-          <div className="message-toolbar">
-            <div className="toolbar-search">
-              <label className="field">
-                <span>Suche</span>
-                <input
-                  onChange={(event) =>
-                    setFilters((current) => ({ ...current, query: event.target.value }))
-                  }
-                  placeholder="Betreff, Inhalt, Absender oder Nachweisnummer"
-                  value={filters.query}
-                />
-              </label>
-            </div>
-
-            <div className="toolbar-filters">
-              <label className="field compact-field">
-                <span>Status</span>
-                <select
-                  onChange={(event) =>
-                    setFilters((current) => ({
-                      ...current,
-                      status: event.target.value as MessageFilters["status"]
-                    }))
-                  }
-                  value={filters.status}
-                >
-                  {messageStatuses.map((status) => (
-                    <option key={status} value={status}>
-                      {getMessageStatusLabel(status)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="field compact-field">
-                <span>Prioritaet</span>
-                <select
-                  onChange={(event) =>
-                    setFilters((current) => ({
-                      ...current,
-                      priority: event.target.value as MessageFilters["priority"]
-                    }))
-                  }
-                  value={filters.priority}
-                >
-                  {messagePriorities.map((priority) => (
-                    <option key={priority} value={priority}>
-                      {getMessagePriorityLabel(priority)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="field compact-field">
-                <span>Richtung</span>
-                <select
-                  onChange={(event) =>
-                    setFilters((current) => ({
-                      ...current,
-                      direction: event.target.value as MessageFilters["direction"]
-                    }))
-                  }
-                  value={filters.direction}
-                >
-                  {messageDirections.map((direction) => (
-                    <option key={direction} value={direction}>
-                      {getMessageDirectionLabel(direction)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              {canCreate ? (
-                <button
-                  className="primary-button"
-                  onClick={() => setComposerOpen((current) => !current)}
-                  type="button"
-                >
-                  {composerOpen ? "Erfassung schliessen" : "Neue Nachricht"}
-                </button>
-              ) : null}
-            </div>
-          </div>
+          <MessageFilters
+            canCreate={canCreate}
+            composerOpen={composerOpen}
+            filters={filters}
+            onChange={setFilters}
+            onToggleComposer={() => setComposerOpen((current) => !current)}
+          />
 
           {composerOpen ? (
-            <form className="composer-card" onSubmit={handleCreateMessage}>
-              <div className="message-section-header">
-                <div>
-                  <h3>Neue Nachricht</h3>
-                  <p className="muted-text">
-                    Diese Erfassung schreibt jetzt in den echten Message-API-Pfad.
-                  </p>
-                </div>
-                <span className="section-chip">persistiert</span>
-              </div>
-
-              <div className="composer-grid">
-                <label className="field">
-                  <span>Richtung</span>
-                  <select
-                    onChange={(event) =>
-                      setComposer((current) => ({
-                        ...current,
-                        direction: event.target.value as MessageSnapshot["direction"]
-                      }))
-                    }
-                    value={composer.direction}
-                  >
-                    <option value="eingang">Eingang</option>
-                    <option value="ausgang">Ausgang</option>
-                  </select>
-                </label>
-                <label className="field">
-                  <span>Kanal</span>
-                  <select
-                    onChange={(event) =>
-                      setComposer((current) => ({
-                        ...current,
-                        channel: event.target.value as MessageSnapshot["channel"]
-                      }))
-                    }
-                    value={composer.channel}
-                  >
-                    <option value="telefon">telefon</option>
-                    <option value="funk">funk</option>
-                    <option value="email">email</option>
-                    <option value="melder">melder</option>
-                    <option value="lagekontakt">lagekontakt</option>
-                  </select>
-                </label>
-                <label className="field">
-                  <span>Prioritaet</span>
-                  <select
-                    onChange={(event) =>
-                      setComposer((current) => ({
-                        ...current,
-                        priority: event.target.value as MessageSnapshot["priority"]
-                      }))
-                    }
-                    value={composer.priority}
-                  >
-                    <option value="sofort">sofort</option>
-                    <option value="hoch">hoch</option>
-                    <option value="normal">normal</option>
-                    <option value="niedrig">niedrig</option>
-                  </select>
-                </label>
-                <label className="field">
-                  <span>Nachrichtenzeit</span>
-                  <input
-                    onChange={(event) =>
-                      setComposer((current) => ({
-                        ...current,
-                        messageTime: event.target.value
-                      }))
-                    }
-                    type="datetime-local"
-                    value={composer.messageTime}
-                  />
-                </label>
-                <label className="field">
-                  <span>Absender</span>
-                  <input
-                    onChange={(event) =>
-                      setComposer((current) => ({
-                        ...current,
-                        senderLabel: event.target.value
-                      }))
-                    }
-                    value={composer.senderLabel}
-                  />
-                </label>
-                <label className="field">
-                  <span>Empfaenger</span>
-                  <input
-                    onChange={(event) =>
-                      setComposer((current) => ({
-                        ...current,
-                        recipientLabel: event.target.value
-                      }))
-                    }
-                    value={composer.recipientLabel}
-                  />
-                </label>
-                <label className="field">
-                  <span>Betreff</span>
-                  <input
-                    onChange={(event) =>
-                      setComposer((current) => ({
-                        ...current,
-                        subject: event.target.value
-                      }))
-                    }
-                    value={composer.subject}
-                  />
-                </label>
-                <label className="field composer-body">
-                  <span>Inhalt</span>
-                  <textarea
-                    onChange={(event) =>
-                      setComposer((current) => ({
-                        ...current,
-                        body: event.target.value
-                      }))
-                    }
-                    value={composer.body}
-                  />
-                </label>
-              </div>
-
-              <div className="button-row">
-                <button className="primary-button" disabled={isPending} type="submit">
-                  Nachricht speichern
-                </button>
-              </div>
-            </form>
+            <MessageComposer
+              composer={composer}
+              isPending={isPending}
+              onChange={setComposer}
+              onSubmit={handleCreateMessage}
+            />
           ) : null}
 
           {workspaceError ? <p className="error-text">{workspaceError}</p> : null}
           {feedback ? <p className="success-text">{feedback}</p> : null}
 
           <div className="message-center-shell">
-            <aside className="message-list-pane">
-              <div className="message-section-header">
-                <div>
-                  <h3>Nachrichtenliste</h3>
-                  <p className="muted-text">
-                    {visibleMessages.length} von {messages.length} Nachricht(en)
-                  </p>
-                </div>
-                <span className="section-chip">
-                  {incidents.find((entry) => entry.id === selectedIncidentId)?.referenceNumber ??
-                    "keine Lage"}
-                </span>
-              </div>
+            <MessageList
+              formatDate={formatDate}
+              incidents={incidents}
+              messages={visibleMessages}
+              onSelectMessage={setSelectedMessageId}
+              selectedIncidentId={selectedIncidentId}
+              selectedMessageId={selectedMessage?.id ?? ""}
+            />
 
-              <div className="message-list">
-                {visibleMessages.map((message) => (
-                  <button
-                    className={`message-list-item ${
-                      selectedMessage?.id === message.id ? "selected" : ""
-                    }`}
-                    key={message.id}
-                    onClick={() => setSelectedMessageId(message.id)}
-                    type="button"
-                  >
-                    <div className="message-item-topline">
-                      <span className={`priority-dot priority-${message.priority}`} />
-                      <span className="message-tracking">{message.trackingNumber}</span>
-                      <span className={`status-pill status-${message.status}`}>
-                        {getMessageStatusLabel(message.status)}
-                      </span>
-                    </div>
-                    <strong>{message.subject}</strong>
-                    <p className="message-item-meta">
-                      {getMessageDirectionLabel(message.direction)} · {message.senderLabel}
-                    </p>
-                    <p className="message-item-meta">
-                      {formatDate(message.messageTime)} · {message.channel}
-                    </p>
-                  </button>
-                ))}
-              </div>
-            </aside>
-
-            <section className="message-detail-pane">
-              {selectedMessage ? (
-                <>
-                  <div className="message-section-header">
-                    <div>
-                      <p className="message-tracking detail-tracking">
-                        {selectedMessage.trackingNumber}
-                      </p>
-                      <h3>{selectedMessage.subject}</h3>
-                    </div>
-                    <div className="detail-pill-row">
-                      <span className={`status-pill status-${selectedMessage.status}`}>
-                        {getMessageStatusLabel(selectedMessage.status)}
-                      </span>
-                      <span
-                        className={`status-pill priority-badge priority-badge-${selectedMessage.priority}`}
-                      >
-                        {selectedMessage.priority}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="detail-grid">
-                    <article className="detail-card">
-                      <h4>Nachrichtenkopf</h4>
-                      <dl className="detail-definition-list">
-                        <div>
-                          <dt>Richtung</dt>
-                          <dd>{getMessageDirectionLabel(selectedMessage.direction)}</dd>
-                        </div>
-                        <div>
-                          <dt>Kanal</dt>
-                          <dd>{selectedMessage.channel}</dd>
-                        </div>
-                        <div>
-                          <dt>Absender</dt>
-                          <dd>{selectedMessage.senderLabel}</dd>
-                        </div>
-                        <div>
-                          <dt>Empfaenger</dt>
-                          <dd>{selectedMessage.recipientLabel}</dd>
-                        </div>
-                        <div>
-                          <dt>Nachrichtenzeit</dt>
-                          <dd>{formatDate(selectedMessage.messageTime)}</dd>
-                        </div>
-                        <div>
-                          <dt>Erfasst</dt>
-                          <dd>{formatDate(selectedMessage.recordedAt)}</dd>
-                        </div>
-                        <div>
-                          <dt>Zuweisung</dt>
-                          <dd>{selectedMessage.assignee}</dd>
-                        </div>
-                        <div>
-                          <dt>Verteiler</dt>
-                          <dd>{selectedMessage.distribution}</dd>
-                        </div>
-                      </dl>
-                    </article>
-
-                    <article className="detail-card">
-                      <h4>Inhalt</h4>
-                      <p className="detail-body">{selectedMessage.body}</p>
-                      <p className="detail-note">
-                        <strong>Vermerk:</strong> {selectedMessage.notes || "kein Vermerk"}
-                      </p>
-                    </article>
-                  </div>
-
-                  {canUpdate ? (
-                    <div className="detail-grid">
-                      <article className="detail-card">
-                        <h4>Bearbeitung</h4>
-                        <div className="action-stack">
-                          <label className="field">
-                            <span>Status</span>
-                            <select
-                              onChange={(event) =>
-                                void handleUpdateMessage(selectedMessage.id, {
-                                  status: event.target.value as MessageSnapshot["status"]
-                                })
-                              }
-                              value={selectedMessage.status}
-                            >
-                              <option value="neu">neu</option>
-                              <option value="gesichtet">gesichtet</option>
-                              <option value="in_bearbeitung">in Bearbeitung</option>
-                              <option value="weitergeleitet">weitergeleitet</option>
-                              <option value="erledigt">erledigt</option>
-                            </select>
-                          </label>
-                          <label className="field">
-                            <span>Zuweisung</span>
-                            <select
-                              onChange={(event) =>
-                                void handleUpdateMessage(selectedMessage.id, {
-                                  assignee: event.target.value
-                                })
-                              }
-                              value={selectedMessage.assignee}
-                            >
-                              <option value="Sichtung offen">Sichtung offen</option>
-                              <option value="KGS Nachrichtenzentrale">
-                                KGS Nachrichtenzentrale
-                              </option>
-                              <option value="S2 Lage">S2 Lage</option>
-                              <option value="S3 Einsatz">S3 Einsatz</option>
-                              <option value="S4 Versorgung">S4 Versorgung</option>
-                              <option value="S5 Presse">S5 Presse</option>
-                            </select>
-                          </label>
-                        </div>
-                      </article>
-
-                      <article className="detail-card">
-                        <div className="message-section-header">
-                          <h4>Verlauf</h4>
-                          {canReadHistory ? (
-                            <button
-                              className="ghost-button"
-                              onClick={() => void handleToggleHistory(selectedMessage.id)}
-                              type="button"
-                            >
-                              {messageHistory[selectedMessage.id]?.visible
-                                ? "Verlauf ausblenden"
-                                : "Verlauf anzeigen"}
-                            </button>
-                          ) : null}
-                        </div>
-
-                        {messageHistory[selectedMessage.id]?.visible ? (
-                          <div className="timeline-list">
-                            {messageHistory[selectedMessage.id]?.loading ? (
-                              <p className="muted-text">Verlauf wird geladen...</p>
-                            ) : null}
-                            {messageHistory[selectedMessage.id]?.error ? (
-                              <p className="error-text">
-                                {messageHistory[selectedMessage.id]?.error}
-                              </p>
-                            ) : null}
-                            {messageHistory[selectedMessage.id]?.entries.map((entry) => (
-                              <article className="timeline-entry" key={entry.id}>
-                                <div className="timeline-marker" />
-                                <div>
-                                  <div className="timeline-entry-head">
-                                    <strong>{entry.summary}</strong>
-                                    <span className="muted-text">
-                                      {formatDate(entry.createdAt)}
-                                    </span>
-                                  </div>
-                                  <p className="timeline-actor">{entry.actor}</p>
-                                  <ul className="history-change-list">
-                                    {entry.changes.map((change, index) => (
-                                      <li key={`${entry.id}-${change.field}-${index}`}>
-                                        {change.field}: {change.from ?? "leer"} -&gt;{" "}
-                                        {change.to ?? "leer"}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              </article>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="muted-text">
-                            Verlauf bei Bedarf einblenden.
-                          </p>
-                        )}
-                      </article>
-                    </div>
-                  ) : null}
-                </>
-              ) : (
-                <div className="empty-state">
-                  <h3>Keine Nachricht geladen</h3>
-                  <p className="muted-text">
-                    Melde dich an und waehle eine Lage, um Nachrichten zu laden.
-                  </p>
-                </div>
-              )}
-            </section>
+            <MessageDetail
+              canReadHistory={canReadHistory}
+              canUpdate={canUpdate}
+              formatDate={formatDate}
+              historyState={
+                selectedMessage ? messageHistory[selectedMessage.id] : undefined
+              }
+              message={selectedMessage}
+              onToggleHistory={() => {
+                if (selectedMessage) {
+                  void handleToggleHistory(selectedMessage.id);
+                }
+              }}
+              onUpdate={(input) => {
+                if (selectedMessage) {
+                  void handleUpdateMessage(selectedMessage.id, input);
+                }
+              }}
+            />
           </div>
         </div>
       </div>
