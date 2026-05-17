@@ -4,127 +4,107 @@ import { OperationsConsole } from "./operations-console";
 
 export const dynamic = "force-dynamic";
 
-const milestones = [
-  "Login und Rollen",
-  "Lageverwaltung",
-  "Audit-Basis",
-  "Nachrichtenmodul",
-  "Tagebuchmodul"
-];
-
-const foundationModules = [
-  "Getrennte Web-Deploy-App fuer Firebase App Hosting",
-  "Health-Endpunkt im Backend",
-  "Persistenter Incident-Kern mit Audit-Ausbau",
-  "Demo-Login auf erweitertem Rollenpfad",
-  "Erste fachliche Modulroute fuer Nachrichten"
-];
-
 export default async function HomePage() {
   const apiSnapshot = await loadApiSnapshot();
+  const incidentCount = apiSnapshot.incidents.length;
 
   return (
-    <main className="shell">
-      <section className="hero">
-        <p className="eyebrow">MVP 0.2 Anlauf</p>
-        <h1>Stabsunterstuetzungssoftware</h1>
+    <main className="shell page-stack">
+      <section className="hero page-hero">
+        <p className="eyebrow">Arbeitsraum</p>
+        <h1>Lageuebersicht</h1>
         <p className="lead">
-          Erste sichtbare Fachoberflaeche fuer die Nachrichtenzentrale auf einem
-          bereits lauffaehigen Lage-, Rollen- und Audit-Fundament.
+          Zentrale Startseite fuer Lagekontext, Betriebsstatus und den Einstieg
+          in die aktive Arbeit. Nachrichten und Journal laufen in den
+          Fachmodulen, diese Route bleibt bewusst Ueberblick.
         </p>
-      </section>
 
-      <section className="panel">
-        <h2>Aktueller Projektstand</h2>
-        <ul className="milestones">
-          {milestones.map((milestone) => (
-            <li key={milestone}>{milestone}</li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="panel grid-panel">
-        <div>
-          <h2>Technisches Fundament</h2>
-          <ul className="milestones compact">
-            {foundationModules.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="callout">
-          <h3>Demo-Zugriff API</h3>
-          <p>`POST /api/auth/login` mit `admin / demo`</p>
-          <p>`GET /api/incidents` fuer die erste Lageuebersicht</p>
-          <p>API-Ziel: `{apiSnapshot.baseUrl || "nicht gesetzt"}`</p>
-        </div>
-      </section>
-
-      <section className="panel module-panel">
-        <div className="message-section-header">
-          <div>
-            <p className="eyebrow">Moduleinstieg</p>
-            <h2>Facharbeit nicht auf der Startseite</h2>
-            <p className="lead">
-              Die eigentliche Nachrichtenarbeit liegt jetzt auf einer eigenen
-              Route, damit die Startseite Ueberblick bleibt und nicht in eine
-              einzige Scrollflaeche kippt.
-            </p>
-          </div>
+        <div className="hero-actions">
           <Link className="primary-button" href="/messages">
-            Nachrichtenmodul oeffnen
+            Nachrichten oeffnen
           </Link>
         </div>
       </section>
 
-      <section className="panel">
-        <div className="status-header">
-          <div>
-            <p className="eyebrow">Live-Verbindung</p>
-            <h2>Backend-Status</h2>
+      <section className="panel overview-grid">
+        <article className="status-card">
+          <p className="eyebrow">Betriebsstatus</p>
+          <h2>Backend und Lagebestand</h2>
+          <div className="stack compact-stack">
+            <p>
+              Verbindung:{" "}
+              <span
+                className={
+                  apiSnapshot.backendReachable
+                    ? "status-badge online"
+                    : "status-badge offline"
+                }
+              >
+                {apiSnapshot.backendReachable ? "verbunden" : "nicht verbunden"}
+              </span>
+            </p>
+            <p>API-Ziel: `{apiSnapshot.baseUrl || "nicht gesetzt"}`</p>
+            <p>Erkannte Lagen: {incidentCount}</p>
+            {apiSnapshot.health ? (
+              <p>
+                API-Stand: `{apiSnapshot.health.service}` / `{apiSnapshot.health.stage}`
+              </p>
+            ) : null}
+            {apiSnapshot.error ? (
+              <p className="error-text">{apiSnapshot.error}</p>
+            ) : null}
           </div>
-          <span
-            className={
-              apiSnapshot.backendReachable ? "status-badge online" : "status-badge offline"
-            }
-          >
-            {apiSnapshot.backendReachable ? "verbunden" : "nicht verbunden"}
-          </span>
-        </div>
+        </article>
 
-        {apiSnapshot.backendReachable && apiSnapshot.health ? (
-          <div className="status-grid">
-            <div className="status-card">
-              <h3>API-Gesundheit</h3>
-              <p>Status: `{apiSnapshot.health.status}`</p>
-              <p>Dienst: `{apiSnapshot.health.service}`</p>
-              <p>Stand: `{apiSnapshot.health.stage}`</p>
-            </div>
+        <article className="status-card">
+          <p className="eyebrow">Einstieg</p>
+          <h2>Erster Arbeitsablauf</h2>
+          <ol className="onboarding-steps">
+            <li>Mit `admin / demo` anmelden.</li>
+            <li>Eine Lage auswaehlen oder neu anlegen.</li>
+            <li>Das Modul `Nachrichten` oeffnen.</li>
+            <li>Eine Meldung erfassen, bewerten und weiterleiten.</li>
+            <li>Rueckmeldungen spaeter im Journal anschliessen.</li>
+          </ol>
+        </article>
+      </section>
 
-            <div className="status-card">
-              <h3>Live-Lagebestand aus dem Backend</h3>
-              {apiSnapshot.incidents.length > 0 ? (
-                <ul className="milestones compact">
-                  {apiSnapshot.incidents.map((incident) => (
-                    <li key={incident.id}>
-                      {incident.title} ({incident.referenceNumber}) - {incident.status} -{" "}
-                      {incident.createdBy}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p>Aktuell wurden noch keine Lagen zur Anzeige geliefert.</p>
-              )}
+      <section className="panel overview-grid">
+        <article className="status-card">
+          <p className="eyebrow">Lagen im Zugriff</p>
+          <h2>Aktuelle Auswahlbasis</h2>
+          {incidentCount > 0 ? (
+            <ul className="milestones compact">
+              {apiSnapshot.incidents.slice(0, 5).map((incident) => (
+                <li key={incident.id}>
+                  {incident.referenceNumber} - {incident.title} ({incident.status})
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>Aktuell wurden noch keine Lagen aus dem Backend geliefert.</p>
+          )}
+        </article>
+
+        <article className="status-card">
+          <p className="eyebrow">Arbeitsmodule</p>
+          <h2>Naechste Wege</h2>
+          <div className="stack compact-stack">
+            <p>
+              `Nachrichten` ist das aktive Arbeitsmodul fuer Sichtung,
+              Bewertung, Weiterleitung und Nachweis.
+            </p>
+            <p>
+              `Journal` folgt als integrierter Nebenpfad im naechsten Schritt
+              des Sprints.
+            </p>
+            <div className="hero-actions">
+              <Link className="ghost-button" href="/messages">
+                Zum Nachrichtenworkflow
+              </Link>
             </div>
           </div>
-        ) : (
-          <div className="status-card error-card">
-            <h3>Backend aktuell nicht lesbar</h3>
-            <p>{apiSnapshot.error ?? "Kein Fehlertext verfuegbar."}</p>
-            <p>Pruefziel: `{apiSnapshot.baseUrl || "nicht konfiguriert"}`</p>
-          </div>
-        )}
+        </article>
       </section>
 
       <OperationsConsole initialSnapshot={apiSnapshot} />

@@ -337,8 +337,13 @@ export function OperationsConsole({ initialSnapshot }: OperationsConsoleProps) {
     <section className="panel workspace-panel">
       <div className="workspace-header">
         <div>
-          <p className="eyebrow">Arbeitsansicht</p>
-          <h2>Demo-Betrieb mit Login, Benutzerstatus und Lagenbearbeitung</h2>
+          <p className="eyebrow">Lagekontext</p>
+          <h2>Login, Lagepflege und Verlauf</h2>
+          <p className="muted-text">
+            Diese Teilflaeche kuemmert sich nur um Sitzung, Lageanlage,
+            Lagepflege und den Verlauf. Die fachliche Nachrichtenarbeit liegt
+            auf `/messages`.
+          </p>
         </div>
 
         <button className="ghost-button" onClick={() => void refreshIncidents()} type="button">
@@ -451,7 +456,7 @@ export function OperationsConsole({ initialSnapshot }: OperationsConsoleProps) {
         <div className="status-card">
           <div className="list-header">
             <div>
-              <h3>Lageansicht</h3>
+              <h3>Lageuebersicht</h3>
               <p className="muted-text">
                 {sortedIncidents.length} Lage(n) aus dem Live-Backend
               </p>
