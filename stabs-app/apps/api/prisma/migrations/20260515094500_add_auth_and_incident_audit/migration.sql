@@ -68,6 +68,19 @@ CREATE INDEX "AuthSession_userId_idx" ON "AuthSession"("userId");
 -- CreateIndex
 CREATE INDEX "IncidentAuditEntry_incidentId_createdAt_idx" ON "IncidentAuditEntry"("incidentId", "createdAt" DESC);
 
+-- Backfill placeholder users for pre-auth legacy incidents so the new foreign key can be added safely.
+INSERT INTO "User" ("id", "username", "displayName", "passwordHash", "passwordSalt")
+SELECT DISTINCT
+    legacy_incident."createdByUserId",
+    legacy_incident."createdByUserId",
+    legacy_incident."createdByUserId",
+    '',
+    ''
+FROM "Incident" AS legacy_incident
+LEFT JOIN "User" AS existing_user
+    ON existing_user."id" = legacy_incident."createdByUserId"
+WHERE existing_user."id" IS NULL;
+
 -- AddForeignKey
 ALTER TABLE "UserRole" ADD CONSTRAINT "UserRole_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 

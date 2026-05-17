@@ -108,6 +108,8 @@ export class PrismaAuthStore implements AuthStore, OnModuleInit {
       });
     }
 
+    const userRoleAssignments: Array<{ userId: string; roleKey: AppRole }> = [];
+
     for (const user of getSeededAuthUsers()) {
       await this.prisma.user.upsert({
         where: {
@@ -129,21 +131,17 @@ export class PrismaAuthStore implements AuthStore, OnModuleInit {
       });
 
       for (const roleKey of user.roles) {
-        await this.prisma.userRole.upsert({
-          where: {
-            userId_roleKey: {
-              userId: user.id,
-              roleKey
-            }
-          },
-          update: {},
-          create: {
-            userId: user.id,
-            roleKey
-          }
+        userRoleAssignments.push({
+          userId: user.id,
+          roleKey
         });
       }
     }
+
+    await this.prisma.userRole.createMany({
+      data: userRoleAssignments,
+      skipDuplicates: true
+    });
   }
 
   private toAuthenticatedSession(

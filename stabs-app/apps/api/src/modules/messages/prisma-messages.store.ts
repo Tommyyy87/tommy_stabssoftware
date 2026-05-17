@@ -27,64 +27,71 @@ export class PrismaMessagesStore implements MessageStore, OnModuleInit {
 
     const seededMessages = getSeededMessagesForIncidents();
 
-    for (const seeded of seededMessages) {
-      await prisma.message.create({
-        data: {
-          id: seeded.id,
-          incidentId: seeded.incidentId,
-          trackingNumber: seeded.trackingNumber,
-          direction: seeded.direction,
-          channel: seeded.channel,
-          priority: seeded.priority,
-          status: seeded.status,
-          messageTime: new Date(seeded.messageTime),
-          recordedAt: new Date(seeded.recordedAt),
-          senderLabel: seeded.senderLabel,
-          recipientLabel: seeded.recipientLabel,
-          subject: seeded.subject,
-          body: seeded.body,
-          assignee: seeded.assignee,
-          distribution: seeded.distribution,
-          notes: seeded.notes,
-          createdAt: new Date(seeded.createdAt),
-          createdByUserId: seeded.createdBy,
-          updatedAt: new Date(seeded.updatedAt),
-          updatedByUserId: seeded.updatedBy,
-          dispatches: {
-            create: seeded.dispatches.map((dispatch) => ({
-              id: dispatch.id,
-              incidentId: dispatch.incidentId,
-              targetRole: dispatch.targetRole,
-              dispatchedAt: new Date(dispatch.dispatchedAt),
-              dispatchedByUserId: this.resolveSeedUserId(dispatch.dispatchedBy),
-              dispatchNote: dispatch.dispatchNote,
-              seenAt: dispatch.seenAt ? new Date(dispatch.seenAt) : null,
-              acknowledgedAt: dispatch.acknowledgedAt
-                ? new Date(dispatch.acknowledgedAt)
-                : null,
-              acknowledgedByUserId: dispatch.acknowledgedBy
-                ? this.resolveSeedUserId(dispatch.acknowledgedBy)
-                : null,
-              processingStatus: dispatch.processingStatus
-            }))
-          },
-          auditEntries: {
-            create: {
-              id: `message-audit-seed-${seeded.id}`,
-              incidentId: seeded.incidentId,
-              actorUserId: seeded.createdBy,
-              action: "created",
-              summary: "Nachricht erfasst.",
-              changes: [
-                { field: "subject", from: null, to: seeded.subject },
-                { field: "status", from: null, to: seeded.status },
-                { field: "assignee", from: null, to: seeded.assignee }
-              ]
-            }
-          }
-        }
-      });
-    }
+    await prisma.message.createMany({
+      data: seededMessages.map((seeded) => ({
+        id: seeded.id,
+        incidentId: seeded.incidentId,
+        trackingNumber: seeded.trackingNumber,
+        direction: seeded.direction,
+        channel: seeded.channel,
+        priority: seeded.priority,
+        status: seeded.status,
+        messageTime: new Date(seeded.messageTime),
+        recordedAt: new Date(seeded.recordedAt),
+        senderLabel: seeded.senderLabel,
+        recipientLabel: seeded.recipientLabel,
+        subject: seeded.subject,
+        body: seeded.body,
+        assignee: seeded.assignee,
+        distribution: seeded.distribution,
+        notes: seeded.notes,
+        createdAt: new Date(seeded.createdAt),
+        createdByUserId: seeded.createdBy,
+        updatedAt: new Date(seeded.updatedAt),
+        updatedByUserId: seeded.updatedBy
+      })),
+      skipDuplicates: true
+    });
+
+    await prisma.messageDispatch.createMany({
+      data: seededMessages.flatMap((seeded) =>
+        seeded.dispatches.map((dispatch) => ({
+          id: dispatch.id,
+          incidentId: dispatch.incidentId,
+          messageId: seeded.id,
+          targetRole: dispatch.targetRole,
+          dispatchedAt: new Date(dispatch.dispatchedAt),
+          dispatchedByUserId: this.resolveSeedUserId(dispatch.dispatchedBy),
+          dispatchNote: dispatch.dispatchNote,
+          seenAt: dispatch.seenAt ? new Date(dispatch.seenAt) : null,
+          acknowledgedAt: dispatch.acknowledgedAt
+            ? new Date(dispatch.acknowledgedAt)
+            : null,
+          acknowledgedByUserId: dispatch.acknowledgedBy
+            ? this.resolveSeedUserId(dispatch.acknowledgedBy)
+            : null,
+          processingStatus: dispatch.processingStatus
+        }))
+      ),
+      skipDuplicates: true
+    });
+
+    await prisma.messageAuditEntry.createMany({
+      data: seededMessages.map((seeded) => ({
+        id: `message-audit-seed-${seeded.id}`,
+        incidentId: seeded.incidentId,
+        messageId: seeded.id,
+        actorUserId: seeded.createdBy,
+        action: "created",
+        summary: "Nachricht erfasst.",
+        changes: [
+          { field: "subject", from: null, to: seeded.subject },
+          { field: "status", from: null, to: seeded.status },
+          { field: "assignee", from: null, to: seeded.assignee }
+        ]
+      })),
+      skipDuplicates: true
+    });
   }
 
   async listByIncident(incidentId: string): Promise<MessageSummary[]> {
