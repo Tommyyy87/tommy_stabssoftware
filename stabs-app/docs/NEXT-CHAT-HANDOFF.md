@@ -1,31 +1,40 @@
 # Next Chat Handoff
 
 Stand: `2026-05-17`
-Letzter verifizierter Frontend-Commit: `feb4894`
-Vorherige Sprint-1-Frontend-Commits:
+Letzter verifizierter Frontend-Commit: `213f3e1`
+Vorherige relevante Frontend-Commits:
 
+- `b163067` `docs: add next chat handoff`
+- `feb4894` `feat: add journal route and refresh sprint 1 docs`
 - `2ec1954` `feat: split messages workspace into workflow components`
 - `c598818` `feat: add workspace shell and overview foundation`
 
 ## 1. Worum es im naechsten Chat gehen soll
 
-Der naechste fachlich sinnvolle Schritt ist:
+Der naechste fachlich sinnvolle Schritt ist nicht mehr Shell- oder
+Workspace-Grundlage, sondern der erste echte Fachausbau auf dem neuen Rahmen:
 
-1. den globalen Workspace-Kontext wirklich in `/` und `/messages` verdrahten
-2. danach `journal` von der Einstiegsroute auf echte Datenuebernahme vorbereiten
+1. `S2 Lage` von der Platzhalterseite zur ersten echten Facharbeitsflaeche machen
+2. danach den Datenpfad von `Nachrichten` in das `Tagebuch` vorbereiten
 
-Der Fokus fuer den naechsten Start soll also auf `Task 1 + Task 4 sauber verbinden`
-liegen, nicht auf neuer Shell oder neuem Grundlayout.
+Der Fokus fuer den naechsten Start soll also auf `S2 + Tagebuch-Uebernahme`
+liegen, nicht auf weiterer Layoutkosmetik.
 
 ## 2. Aktueller sichtbarer Stand
 
-Im Frontend sind aktuell live sichtbar:
+Im Frontend sind aktuell strukturell vorhanden:
 
-- gemeinsame App-Shell mit linker Navigation
-- Lageuebersicht auf `/`
+- Fuehrungsrahmen mit oberem Lagekopf
+- horizontale Navigation fuer:
+  - `Fuehrungsueberblick`
+  - `S1` bis `S6`
+  - `Nachrichten`
+  - `Tagebuch`
+- gemeinsamer Workspace-Kontext fuer Session, Benutzer, Lagen und aktive Lage
+- Lagepflege auf `/`
 - Nachrichtenarbeitsflaeche auf `/messages`
-- Journal-Einstieg auf `/journal`
-- Onboarding-Pfad auf der Startseite
+- Tagebuch-Einstieg auf `/journal`
+- Platzhalterseiten fuer `S1` bis `S6`
 
 Live-URL:
 
@@ -48,18 +57,20 @@ Diese Dateien zuerst lesen, bevor im neuen Chat weiterentwickelt wird:
 
 ## 4. Was technisch schon umgesetzt ist
 
-### Frontend-Grundlage
+### Frontend-Rahmen
 
-- App-Shell:
-  - `firebase-web/app/_components/app-shell.tsx`
-  - `firebase-web/app/_components/app-header.tsx`
-  - `firebase-web/app/_components/app-nav.tsx`
-- Workspace-Basis:
-  - `firebase-web/app/_providers/workspace-provider.tsx`
-  - `firebase-web/app/_hooks/use-workspace.ts`
-  - `firebase-web/lib/workspace-storage.ts`
+- `firebase-web/app/_components/app-shell.tsx`
+- `firebase-web/app/_components/app-header.tsx`
+- `firebase-web/app/_components/app-nav.tsx`
+- `firebase-web/app/globals.css`
 
-### Startseite
+### Workspace-Kontext
+
+- `firebase-web/app/_providers/workspace-provider.tsx`
+- `firebase-web/app/_hooks/use-workspace.ts`
+- `firebase-web/lib/workspace-storage.ts`
+
+### Startseite und Lagepflege
 
 - `firebase-web/app/page.tsx`
 - `firebase-web/app/operations-console.tsx`
@@ -68,55 +79,72 @@ Diese Dateien zuerst lesen, bevor im neuen Chat weiterentwickelt wird:
 
 - Orchestrierung:
   - `firebase-web/app/messages/messages-workspace.tsx`
-- zerlegte Komponenten:
+- Workflow-Komponenten:
   - `firebase-web/app/messages/_components/*`
 - Pure View Helper:
   - `firebase-web/lib/messages-view.ts`
 
-### Journal
+### Tagebuch
 
 - `firebase-web/app/journal/page.tsx`
 - `firebase-web/app/journal/journal-workspace.tsx`
 
+### Fachbereiche
+
+- gemeinsamer Platzhalter-Renderer:
+  - `firebase-web/app/_components/staff-area-page.tsx`
+- Platzhalterseiten:
+  - `firebase-web/app/s1/page.tsx`
+  - `firebase-web/app/s2/page.tsx`
+  - `firebase-web/app/s3/page.tsx`
+  - `firebase-web/app/s4/page.tsx`
+  - `firebase-web/app/s5/page.tsx`
+  - `firebase-web/app/s6/page.tsx`
+
 ## 5. Was noch nicht fertig ist
 
-Wichtig: Der Workspace-Kontext ist als Grundlage angelegt, aber noch nicht
-wirklich durchgezogen.
+Wichtig: Der Fuehrungsrahmen und die Navigation stehen, aber die Fachbereiche
+sind noch nicht inhaltlich ausgebaut.
 
 Das bedeutet konkret:
 
-1. `operations-console.tsx` und `messages-workspace.tsx` halten weiterhin eigene
-   Session-/Incident-States
-2. `workspace-provider.tsx` ist noch nicht die echte gemeinsame Quelle fuer
-   Session, Benutzer und gewaehlte Lage
-3. `/journal` ist aktuell noch ein strukturierter Einstieg, aber noch kein
-   datengetriebenes Modul
+1. `S1` bis `S6` sind aktuell noch Platzhalterseiten
+2. `S2 Lage` hat noch keine echte Lagearbeitslogik
+3. das `Tagebuch` hat noch keinen echten Uebernahmepfad aus `Nachrichten`
+4. der neue Fuehrungsrahmen ist technisch verifiziert, aber live noch nicht
+   systematisch visuell geprueft
 
 ## 6. Was im naechsten Chat konkret gemacht werden soll
 
 ### Schritt 1
 
-Die bestehenden doppelten States in:
+`S2 Lage` als erste echte Facharbeitsflaeche aufbauen.
 
-- `firebase-web/app/operations-console.tsx`
-- `firebase-web/app/messages/messages-workspace.tsx`
+Ziel:
 
-gegen den gemeinsamen Workspace-Kontext konsolidieren.
+- die aktive Lage aus dem Workspace sichtbar und sinnvoll nutzen
+- aus dem Fuehrungsueberblick in eine echte Lagearbeitsflaeche verzweigen
+- `S2` nicht nur als Platzhalter, sondern als erster fachlich brauchbarer Bereich
 
 ### Schritt 2
 
-`layout.tsx` oder die Routenstruktur so erweitern, dass die relevanten
-Workspace-Daten zentral bereitgestellt werden koennen, ohne Session-Logik
-zweimal zu halten.
+Den fachlichen Uebernahmepfad in Richtung `Tagebuch` vorbereiten.
+
+Ziel:
+
+- aus `Nachrichten` ableitbare Punkte fuer das `Tagebuch` vormerken
+- UI und State so vorbereiten, dass spaeter echte Uebernahmen moeglich sind
 
 ### Schritt 3
 
-Die Lageauswahl in `/` und `/messages` auf denselben aktiven Incident-Kontext
-umstellen.
+Den neuen Fuehrungsrahmen live pruefen.
 
-### Schritt 4
+Mindestens pruefen:
 
-Erst danach `journal` auf einen echten Uebernahmepfad ausrichten.
+- `/`
+- `/messages`
+- `/journal`
+- `/s2`
 
 ## 7. Lokale Verifikation vor Abschluss
 
@@ -130,9 +158,9 @@ Immer in dieser Reihenfolge laufen lassen:
 
 Hinweis:
 
-- `npm run typecheck` kann fehlschlagen, wenn parallel dazu gerade `.next/types`
-  neu erzeugt oder geloescht werden
-- deshalb `typecheck` nicht parallel zu `build` starten
+- wenn lokal ein `next dev` auf Port `3000` laeuft, kann ein Build an einer
+  gesperrten `.next/trace` scheitern
+- in dem Fall den Dev-Server vor dem finalen `build` stoppen
 
 ## 8. Online-Rollout
 
@@ -145,10 +173,11 @@ Der aktuelle manuelle Rollout-Pfad fuer das Frontend ist:
    - `/`
    - `/messages`
    - `/journal`
+   - `/s2`
 
 ## 9. Formulierung fuer den naechsten Chat
 
 Wenn der neue Chat ohne Rueckfragen schnell starten soll, diese Kurzform
 verwenden:
 
-`Bitte setze in stabs-app Sprint 1 fort. Bezugspunkt ist docs/NEXT-CHAT-HANDOFF.md und der Plan 2026-05-17-sprint-1-usable-workflow. Nächster Schritt: Workspace-Kontext wirklich in / und /messages verdrahten, keine neue Shell bauen, danach Journal-Datenpfad vorbereiten.`
+`Bitte setze in stabs-app auf Basis von docs/NEXT-CHAT-HANDOFF.md fort. Letzter Stand ist Commit 213f3e1. Naechster Schritt: S2 Lage als erste echte Facharbeitsflaeche ausbauen und danach den Uebernahmepfad von Nachrichten ins Tagebuch vorbereiten.`

@@ -47,46 +47,83 @@ Im Backend sind aktuell als tragender Kern vorhanden:
 - `POST /api/incidents`
 - `PATCH /api/incidents/:incidentId`
 - `GET /api/incidents/:incidentId/history`
-- Incident-gebundene Message-Endpunkte fuer Liste, Anlage, Bearbeitung und Verlauf
+- incident-gebundene Message-Endpunkte fuer Liste, Anlage, Bearbeitung und Verlauf
 
-## 5. Frontend-Zielbild Sprint 1
+## 5. Aktuelles Frontend-Zielbild
 
-Der Frontend-Stand in `firebase-web` ist jetzt fachlich so getrennt:
+Der Frontend-Stand in `firebase-web` ist jetzt nicht mehr nur um einzelne
+Routen herum gebaut, sondern um einen gemeinsamen Fuehrungsrahmen:
 
 1. `/`
-   - Lageuebersicht
-   - Backend-Status
-   - Einstieg und Onboarding
-   - Lagepflege
-2. `/messages`
-   - sichtbarer Workflow fuer Sichtung, Bewertung, Weiterleitung und Nachweis
-   - zerlegte Komponenten fuer Header, Filter, Liste, Detail, Aktionen und Composer
-3. `/journal`
-   - schlanker Journalpfad
-   - Anschluss fuer spaetere Uebernahme und Nachweisverdichtung
+   - `Fuehrungsueberblick`
+   - gemeinsamer Lage- und Bedienkontext
+   - Einstieg in Fachbereiche und Querschnittsmodule
+   - Lagepflege und Login/Logout im Workspace
+2. `/s1` bis `/s6`
+   - sichtbar angelegte Fachbereiche fuer:
+     - `S1 Personal / Inneres`
+     - `S2 Lage`
+     - `S3 Einsatz`
+     - `S4 Versorgung`
+     - `S5 Presse / Oeffentlichkeit`
+     - `S6 Information / Kommunikation`
+   - aktuell als fachlich korrekt benannte Platzhalterseiten fuer den weiteren Ausbau
+3. `/messages`
+   - aktives Querschnittsmodul fuer Sichtung, Bewertung, Weiterleitung und Nachverfolgung
+4. `/journal`
+   - im UI bewusst als `Tagebuch` bezeichnet
+   - aktuell strukturierter Nachweis- und Uebernahmepfad
 
 ## 6. Gemeinsamer Frontend-Rahmen
 
-Sprint 1 fuehrt einen gemeinsamen Arbeitsrahmen ein:
+Der gemeinsame Arbeitsrahmen besteht jetzt aus:
 
-- linke Hauptnavigation
-- gemeinsamer Kopf- und Inhaltsrahmen
-- Workspace-Grundgeruest fuer Session- und Lagekontext
-- konsistente Modulrouten statt einzelner voneinander isolierter Seiten
+- festem Lagekopf am oberen Rand statt linker Dauernavigation
+- horizontaler Modulnavigation fuer Fuehrungsueberblick, `S1` bis `S6`,
+  `Nachrichten` und `Tagebuch`
+- gemeinsamem Workspace-Kontext fuer:
+  - Session
+  - Current User
+  - Incident-Liste
+  - aktive Lage
+  - Backend-Status und API-Basis
+- sachlich-taktischem Layoutsystem in `firebase-web/app/globals.css`
 
-## 7. Aktuelle technische Leitplanken
+Wichtige Dateien:
+
+- `firebase-web/app/_components/app-shell.tsx`
+- `firebase-web/app/_components/app-header.tsx`
+- `firebase-web/app/_components/app-nav.tsx`
+- `firebase-web/app/_providers/workspace-provider.tsx`
+- `firebase-web/app/_hooks/use-workspace.ts`
+- `firebase-web/lib/workspace-storage.ts`
+
+## 7. Fachliche Strukturierung
+
+Das Frontend folgt jetzt einem `Fuehrungsrahmen + Fachbereiche +
+Querschnittsmodule`-Ansatz:
+
+- `Fuehrungsueberblick` bleibt gemeinsame Start- und Verteilerflaeche
+- die `S`-Funktionen bilden die langfristige fachliche Hauptstruktur
+- `Nachrichten` und `Tagebuch` sind querschnittliche Werkzeuge fuer mehrere
+  Bereiche
+
+Damit ist die App-Struktur bereits auf den spaeteren Vollausbau ausgerichtet,
+ohne jetzt schon jede Fachlogik implementiert zu haben.
+
+## 8. Aktuelle technische Leitplanken
 
 - Firebase App Hosting deployt aus `firebase-web`
 - das Frontend bleibt auf `Next.js 15.2.9`
-- `output: "standalone"` bleibt erhalten
 - `styled-jsx` bleibt in den Frontend-Dependencies
 - Cloud Run bezieht `DATABASE_URL` aus Secret Manager
+- der Workspace-Kontext wird im Root-Layout geladen und im Client weitergefuehrt
 
-## 8. Naechste Ausbauschritte
+## 9. Naechste Ausbauschritte
 
-Die naechsten fachlich sinnvollen Schritte sind:
+Die naechsten fachlich sinnvollen Schritte sind jetzt:
 
-1. globalen Workspace-Kontext wirklich in `/` und `/messages` verdrahten
-2. `journal` von der Einstiegsroute auf echte Datenuebernahme ausbauen
-3. lagebezogene Mitgliedschaften und feinere Rollen-/Rechtepruefung anschliessen
-4. weitere Fachmodule auf denselben persistenten Kern setzen
+1. `S2 Lage` von der Platzhalterseite zur ersten echten Facharbeitsflaeche ausbauen
+2. den Uebernahmepfad von `Nachrichten` in das `Tagebuch` als echte Datenuebernahme vorbereiten
+3. danach weitere `S`-Bereiche schrittweise mit eigener Fachlogik fuellen
+4. spaeter lagebezogene Mitgliedschaften und feinere Rollen-/Rechtepruefung anschliessen
