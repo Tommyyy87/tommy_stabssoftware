@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test app/page.test.ts app/messages/page.test.ts app/_components/app-nav.test.ts app/_providers/workspace-provider.test.ts lib/api.test.ts lib/message-center.test.ts lib/workspace-storage.test.ts lib/messages-view.test.ts"
+    "test": "tsx --test app/page.test.ts app/messages/page.test.ts app/journal/page.test.ts app/_components/app-nav.test.ts app/_providers/workspace-provider.test.ts lib/api.test.ts lib/message-center.test.ts lib/workspace-storage.test.ts lib/messages-view.test.ts"
   },
   "dependencies": {
     "next": "15.2.9",

@@ -95,12 +95,15 @@ export default async function HomePage() {
               Bewertung, Weiterleitung und Nachweis.
             </p>
             <p>
-              `Journal` folgt als integrierter Nebenpfad im naechsten Schritt
-              des Sprints.
+              `Journal` ist jetzt als integrierter Nebenpfad fuer Uebernahme und
+              Nachweis sichtbar eingebunden.
             </p>
             <div className="hero-actions">
               <Link className="ghost-button" href="/messages">
                 Zum Nachrichtenworkflow
+              </Link>
+              <Link className="ghost-button" href="/journal">
+                Zum Journal
               </Link>
             </div>
           </div>
