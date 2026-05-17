@@ -1,13 +1,10 @@
 import Link from "next/link";
 
-import { loadApiSnapshot } from "../../lib/api";
 import { MessagesWorkspace } from "./messages-workspace";
 
 export const dynamic = "force-dynamic";
 
-export default async function MessagesPage() {
-  const apiSnapshot = await loadApiSnapshot();
-
+export default function MessagesPage() {
   return (
     <main className="shell">
       <section className="hero">
@@ -26,11 +23,7 @@ export default async function MessagesPage() {
         </div>
       </section>
 
-      <MessagesWorkspace
-        baseUrl={apiSnapshot.baseUrl}
-        backendReachable={apiSnapshot.backendReachable}
-        initialIncidents={apiSnapshot.incidents}
-      />
+      <MessagesWorkspace />
     </main>
   );
 }

@@ -2,11 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState, useTransition } from "react";
 import {
-  ApiSnapshot,
-  AuthSession,
-  CurrentUserSnapshot,
   IncidentHistoryEntry,
-  IncidentSnapshot,
   createIncident,
   getIncidentHistory,
   listIncidents,
@@ -14,18 +10,7 @@ import {
   readCurrentUser,
   updateIncident
 } from "../lib/api";
-
-const sessionStorageKey = "stabs-demo-session";
-
-type OperationsConsoleProps = {
-  initialSnapshot: ApiSnapshot;
-};
-
-type AuthState = {
-  session: AuthSession | null;
-  currentUser: CurrentUserSnapshot | null;
-  error: string | null;
-};
+import { useWorkspace } from "./_hooks/use-workspace";
 
 type IncidentFormState = {
   title: string;
@@ -58,86 +43,41 @@ function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Unbekannter Fehler.";
 }
 
-export function OperationsConsole({ initialSnapshot }: OperationsConsoleProps) {
+export function OperationsConsole() {
+  const { state, setIncidents, setSelectedIncidentId, setSession, upsertIncident } =
+    useWorkspace();
   const [loginForm, setLoginForm] = useState({ username: "admin", password: "demo" });
   const [incidentForm, setIncidentForm] = useState<IncidentFormState>({
     title: "",
     referenceNumber: ""
   });
   const [editForm, setEditForm] = useState<EditFormState>(null);
-  const [authState, setAuthState] = useState<AuthState>({
-    session: null,
-    currentUser: null,
-    error: null
-  });
-  const [incidents, setIncidents] = useState(initialSnapshot.incidents);
   const [incidentHistory, setIncidentHistory] = useState<
     Record<string, IncidentHistoryState>
   >({});
   const [incidentFeedback, setIncidentFeedback] = useState<string | null>(null);
-  const [refreshError, setRefreshError] = useState<string | null>(initialSnapshot.error);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [refreshError, setRefreshError] = useState<string | null>(
+    state.backendReachable ? null : "Backend aktuell nicht erreichbar."
+  );
   const [isPending, startTransition] = useTransition();
 
-  const canAuthenticate = initialSnapshot.baseUrl.length > 0;
-  const permissions = authState.currentUser?.permissions ?? [];
+  const canAuthenticate = state.baseUrl.length > 0;
+  const permissions = state.currentUser?.permissions ?? [];
   const canCreate = permissions.includes("incidents.create");
   const canUpdate = permissions.includes("incidents.update");
   const canReadHistory =
     permissions.includes("audit.read") || permissions.includes("incidents.read");
+  const activeIncident =
+    state.incidents.find((incident) => incident.id === state.selectedIncidentId) ?? null;
 
   const sortedIncidents = useMemo(
     () =>
-      [...incidents].sort((left, right) =>
+      [...state.incidents].sort((left, right) =>
         right.createdAt.localeCompare(left.createdAt)
       ),
-    [incidents]
+    [state.incidents]
   );
-
-  useEffect(() => {
-    if (!canAuthenticate) {
-      return;
-    }
-
-    const storedSessionValue = window.localStorage.getItem(sessionStorageKey);
-
-    if (!storedSessionValue) {
-      return;
-    }
-
-    try {
-      const storedSession = JSON.parse(storedSessionValue) as AuthSession;
-
-      void hydrateCurrentUser(storedSession);
-    } catch {
-      window.localStorage.removeItem(sessionStorageKey);
-    }
-  }, [canAuthenticate]);
-
-  async function hydrateCurrentUser(session: AuthSession) {
-    try {
-      const currentUser = await readCurrentUser({
-        baseUrl: initialSnapshot.baseUrl,
-        token: session.token
-      });
-
-      startTransition(() => {
-        setAuthState({
-          session,
-          currentUser,
-          error: null
-        });
-      });
-    } catch (error) {
-      window.localStorage.removeItem(sessionStorageKey);
-      startTransition(() => {
-        setAuthState({
-          session: null,
-          currentUser: null,
-          error: getErrorMessage(error)
-        });
-      });
-    }
-  }
 
   async function refreshIncidents() {
     if (!canAuthenticate) {
@@ -145,7 +85,7 @@ export function OperationsConsole({ initialSnapshot }: OperationsConsoleProps) {
     }
 
     try {
-      const nextIncidents = await listIncidents({ baseUrl: initialSnapshot.baseUrl });
+      const nextIncidents = await listIncidents({ baseUrl: state.baseUrl });
 
       startTransition(() => {
         setIncidents(nextIncidents);
@@ -161,34 +101,32 @@ export function OperationsConsole({ initialSnapshot }: OperationsConsoleProps) {
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIncidentFeedback(null);
+    setAuthError(null);
 
     try {
       const session = await loginWithDemoCredentials({
-        baseUrl: initialSnapshot.baseUrl,
+        baseUrl: state.baseUrl,
         username: loginForm.username,
         password: loginForm.password
       });
 
-      window.localStorage.setItem(sessionStorageKey, JSON.stringify(session));
-      await hydrateCurrentUser(session);
+      const currentUser = await readCurrentUser({
+        baseUrl: state.baseUrl,
+        token: session.token
+      });
+
+      setSession(session, currentUser);
     } catch (error) {
       startTransition(() => {
-        setAuthState({
-          session: null,
-          currentUser: null,
-          error: getErrorMessage(error)
-        });
+        setSession(null, null);
+        setAuthError(getErrorMessage(error));
       });
     }
   }
 
   function handleLogout() {
-    window.localStorage.removeItem(sessionStorageKey);
-    setAuthState({
-      session: null,
-      currentUser: null,
-      error: null
-    });
+    setSession(null, null);
+    setAuthError(null);
     setEditForm(null);
     setIncidentHistory({});
     setIncidentFeedback(null);
@@ -197,19 +135,20 @@ export function OperationsConsole({ initialSnapshot }: OperationsConsoleProps) {
   async function handleCreateIncident(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!authState.session) {
+    if (!state.session) {
       return;
     }
 
     try {
       const createdIncident = await createIncident({
-        baseUrl: initialSnapshot.baseUrl,
-        token: authState.session.token,
+        baseUrl: state.baseUrl,
+        token: state.session.token,
         input: incidentForm
       });
 
       startTransition(() => {
-        setIncidents((current) => [createdIncident, ...current]);
+        upsertIncident(createdIncident);
+        setSelectedIncidentId(createdIncident.id);
         setIncidentForm({ title: "", referenceNumber: "" });
         setIncidentFeedback(`Lage ${createdIncident.referenceNumber} wurde angelegt.`);
       });
@@ -223,14 +162,14 @@ export function OperationsConsole({ initialSnapshot }: OperationsConsoleProps) {
   async function handleUpdateIncident(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!authState.session || !editForm) {
+    if (!state.session || !editForm) {
       return;
     }
 
     try {
       const updatedIncident = await updateIncident({
-        baseUrl: initialSnapshot.baseUrl,
-        token: authState.session.token,
+        baseUrl: state.baseUrl,
+        token: state.session.token,
         incidentId: editForm.incidentId,
         input: {
           title: editForm.title,
@@ -240,11 +179,7 @@ export function OperationsConsole({ initialSnapshot }: OperationsConsoleProps) {
       });
 
       startTransition(() => {
-        setIncidents((current) =>
-          current.map((incident) =>
-            incident.id === updatedIncident.id ? updatedIncident : incident
-          )
-        );
+        upsertIncident(updatedIncident);
         setIncidentHistory((current) => {
           const next = { ...current };
           delete next[updatedIncident.id];
@@ -286,7 +221,7 @@ export function OperationsConsole({ initialSnapshot }: OperationsConsoleProps) {
       return;
     }
 
-    if (!authState.session) {
+    if (!state.session) {
       return;
     }
 
@@ -302,8 +237,8 @@ export function OperationsConsole({ initialSnapshot }: OperationsConsoleProps) {
 
     try {
       const entries = await getIncidentHistory({
-        baseUrl: initialSnapshot.baseUrl,
-        token: authState.session.token,
+        baseUrl: state.baseUrl,
+        token: state.session.token,
         incidentId
       });
 
@@ -338,11 +273,12 @@ export function OperationsConsole({ initialSnapshot }: OperationsConsoleProps) {
       <div className="workspace-header">
         <div>
           <p className="eyebrow">Lagekontext</p>
-          <h2>Login, Lagepflege und Verlauf</h2>
+          <h2>Gemeinsamer Workspace-Kontext</h2>
           <p className="muted-text">
-            Diese Teilflaeche kuemmert sich nur um Sitzung, Lageanlage,
-            Lagepflege und den Verlauf. Die fachliche Nachrichtenarbeit liegt
-            auf `/messages`.
+            Sitzung, aktive Lage und Lagebestand werden hier einmal gepflegt
+            und danach von `/messages`, `Tagebuch` und den kuenftigen
+            Fachbereichen gemeinsam
+            verwendet.
           </p>
         </div>
 
@@ -354,15 +290,37 @@ export function OperationsConsole({ initialSnapshot }: OperationsConsoleProps) {
       <div className="workspace-grid">
         <div className="stack">
           <div className="status-card">
+            <h3>Arbeitslage</h3>
+            <label className="field">
+              <span>Aktive Lage fuer alle Module</span>
+              <select
+                onChange={(event) => setSelectedIncidentId(event.target.value)}
+                value={state.selectedIncidentId}
+              >
+                {sortedIncidents.map((incident) => (
+                  <option key={incident.id} value={incident.id}>
+                    {incident.referenceNumber} - {incident.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p className="muted-text">
+              {activeIncident
+                ? `Aktiv: ${activeIncident.referenceNumber} - ${activeIncident.title}`
+                : "Noch keine aktive Lage verfuegbar."}
+            </p>
+          </div>
+
+          <div className="status-card">
             <h3>Benutzerstatus</h3>
 
-            {authState.currentUser ? (
+            {state.currentUser ? (
               <div className="stack compact-stack">
                 <p>
-                  <strong>{authState.currentUser.user.displayName}</strong> ({authState.currentUser.user.username})
+                  <strong>{state.currentUser.user.displayName}</strong> ({state.currentUser.user.username})
                 </p>
-                <p>Rollen: {authState.currentUser.user.roles.join(", ")}</p>
-                <p>Berechtigungen: {authState.currentUser.permissions.join(", ")}</p>
+                <p>Rollen: {state.currentUser.user.roles.join(", ")}</p>
+                <p>Berechtigungen: {state.currentUser.permissions.join(", ")}</p>
                 <button className="ghost-button" onClick={handleLogout} type="button">
                   Abmelden
                 </button>
@@ -403,7 +361,7 @@ export function OperationsConsole({ initialSnapshot }: OperationsConsoleProps) {
               </form>
             )}
 
-            {authState.error ? <p className="error-text">{authState.error}</p> : null}
+            {authError ? <p className="error-text">{authError}</p> : null}
           </div>
 
           <div className="status-card">
@@ -458,7 +416,7 @@ export function OperationsConsole({ initialSnapshot }: OperationsConsoleProps) {
             <div>
               <h3>Lageuebersicht</h3>
               <p className="muted-text">
-                {sortedIncidents.length} Lage(n) aus dem Live-Backend
+                {sortedIncidents.length} Lage(n) im gemeinsamen Workspace
               </p>
             </div>
           </div>

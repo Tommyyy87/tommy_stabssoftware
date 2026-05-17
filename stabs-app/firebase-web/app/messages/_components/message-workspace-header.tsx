@@ -18,7 +18,7 @@ export function MessageWorkspaceHeader({
         <h2>Nachrichtenarbeitsflaeche</h2>
         <p className="lead message-center-lead">
           Eingang sichten, bewerten, weiterleiten, Rueckmeldung verfolgen und
-          spaeter ins Journal uebernehmen.
+          spaeter ins Tagebuch uebernehmen.
         </p>
       </div>
 
@@ -50,7 +50,7 @@ export function MessageWorkspaceHeader({
         <li>Bewerten</li>
         <li>Weiterleiten</li>
         <li>Quittierung verfolgen</li>
-        <li>Ins Journal uebernehmen</li>
+        <li>Ins Tagebuch uebernehmen</li>
       </ol>
     </div>
   );

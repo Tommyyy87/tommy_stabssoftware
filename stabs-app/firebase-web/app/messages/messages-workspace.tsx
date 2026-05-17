@@ -2,10 +2,8 @@
 
 import { FormEvent, useEffect, useMemo, useState, useTransition } from "react";
 import {
-  AuthSession,
   createMessage,
   getMessageHistory,
-  IncidentSnapshot,
   listMessages,
   loginWithDemoCredentials,
   MessageHistoryEntry,
@@ -14,6 +12,7 @@ import {
   updateMessage
 } from "../../lib/api";
 import { filterVisibleMessages } from "../../lib/messages-view";
+import { useWorkspace } from "../_hooks/use-workspace";
 import { MessageComposer } from "./_components/message-composer";
 import {
   MessageFilters,
@@ -22,22 +21,6 @@ import {
 import { MessageDetail } from "./_components/message-detail";
 import { MessageList } from "./_components/message-list";
 import { MessageWorkspaceHeader } from "./_components/message-workspace-header";
-
-const sessionStorageKey = "stabs-demo-session";
-
-type MessagesWorkspaceProps = {
-  baseUrl: string;
-  backendReachable: boolean;
-  initialIncidents: IncidentSnapshot[];
-};
-
-type CurrentUserSnapshot = Awaited<ReturnType<typeof readCurrentUser>>;
-
-type AuthState = {
-  session: AuthSession | null;
-  currentUser: CurrentUserSnapshot | null;
-  error: string | null;
-};
 
 type MessageHistoryState = {
   visible: boolean;
@@ -88,21 +71,9 @@ function createInitialComposer(): ComposerState {
   };
 }
 
-export function MessagesWorkspace({
-  baseUrl,
-  backendReachable,
-  initialIncidents
-}: MessagesWorkspaceProps) {
+export function MessagesWorkspace() {
+  const { state, setSelectedIncidentId, setSession } = useWorkspace();
   const [loginForm, setLoginForm] = useState({ username: "admin", password: "demo" });
-  const [authState, setAuthState] = useState<AuthState>({
-    session: null,
-    currentUser: null,
-    error: null
-  });
-  const [incidents] = useState(initialIncidents);
-  const [selectedIncidentId, setSelectedIncidentId] = useState(
-    initialIncidents[0]?.id ?? ""
-  );
   const [messages, setMessages] = useState<MessageSnapshot[]>([]);
   const [selectedMessageId, setSelectedMessageId] = useState("");
   const [messageHistory, setMessageHistory] = useState<
@@ -117,12 +88,13 @@ export function MessagesWorkspace({
     direction: "alle"
   });
   const [workspaceError, setWorkspaceError] = useState<string | null>(
-    backendReachable ? null : "Backend aktuell nicht erreichbar."
+    state.backendReachable ? null : "Backend aktuell nicht erreichbar."
   );
+  const [authError, setAuthError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const permissions = authState.currentUser?.permissions ?? [];
+  const permissions = state.currentUser?.permissions ?? [];
   const canRead = permissions.includes("messages.read");
   const canCreate = permissions.includes("messages.create");
   const canUpdate = permissions.includes("messages.update");
@@ -139,62 +111,40 @@ export function MessagesWorkspace({
     null;
 
   useEffect(() => {
-    if (!baseUrl) {
+    if (!state.session || !state.selectedIncidentId || !canRead) {
       return;
     }
 
-    const stored = window.localStorage.getItem(sessionStorageKey);
-
-    if (!stored) {
-      return;
-    }
-
-    try {
-      const session = JSON.parse(stored) as AuthSession;
-      void hydrateCurrentUser(session);
-    } catch {
-      window.localStorage.removeItem(sessionStorageKey);
-    }
-  }, [baseUrl]);
+    void loadMessagesForIncident(state.selectedIncidentId, state.session.token);
+  }, [canRead, state.baseUrl, state.selectedIncidentId, state.session]);
 
   useEffect(() => {
-    if (!authState.session || !selectedIncidentId || !canRead) {
+    setWorkspaceError(
+      state.backendReachable ? null : "Backend aktuell nicht erreichbar."
+    );
+  }, [state.backendReachable]);
+
+  useEffect(() => {
+    setMessages([]);
+    setSelectedMessageId("");
+    setMessageHistory({});
+    setFeedback(null);
+  }, [state.selectedIncidentId]);
+
+  useEffect(() => {
+    if (state.session) {
       return;
     }
 
-    void loadMessagesForIncident(selectedIncidentId, authState.session.token);
-  }, [authState.session, canRead, selectedIncidentId]);
-
-  async function hydrateCurrentUser(session: AuthSession) {
-    try {
-      const currentUser = await readCurrentUser({
-        baseUrl,
-        token: session.token
-      });
-
-      startTransition(() => {
-        setAuthState({
-          session,
-          currentUser,
-          error: null
-        });
-      });
-    } catch (error) {
-      window.localStorage.removeItem(sessionStorageKey);
-      startTransition(() => {
-        setAuthState({
-          session: null,
-          currentUser: null,
-          error: getErrorMessage(error)
-        });
-      });
-    }
-  }
+    setMessages([]);
+    setSelectedMessageId("");
+    setMessageHistory({});
+  }, [state.session]);
 
   async function loadMessagesForIncident(incidentId: string, token: string) {
     try {
       const nextMessages = await listMessages({
-        baseUrl,
+        baseUrl: state.baseUrl,
         incidentId,
         token
       });
@@ -213,34 +163,32 @@ export function MessagesWorkspace({
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setAuthError(null);
 
     try {
       const session = await loginWithDemoCredentials({
-        baseUrl,
+        baseUrl: state.baseUrl,
         username: loginForm.username,
         password: loginForm.password
       });
 
-      window.localStorage.setItem(sessionStorageKey, JSON.stringify(session));
-      await hydrateCurrentUser(session);
+      const currentUser = await readCurrentUser({
+        baseUrl: state.baseUrl,
+        token: session.token
+      });
+
+      setSession(session, currentUser);
     } catch (error) {
       startTransition(() => {
-        setAuthState({
-          session: null,
-          currentUser: null,
-          error: getErrorMessage(error)
-        });
+        setSession(null, null);
+        setAuthError(getErrorMessage(error));
       });
     }
   }
 
   function handleLogout() {
-    window.localStorage.removeItem(sessionStorageKey);
-    setAuthState({
-      session: null,
-      currentUser: null,
-      error: null
-    });
+    setSession(null, null);
+    setAuthError(null);
     setMessages([]);
     setSelectedMessageId("");
     setMessageHistory({});
@@ -250,15 +198,15 @@ export function MessagesWorkspace({
   async function handleCreateMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!authState.session || !selectedIncidentId) {
+    if (!state.session || !state.selectedIncidentId) {
       return;
     }
 
     try {
       const created = await createMessage({
-        baseUrl,
-        incidentId: selectedIncidentId,
-        token: authState.session.token,
+        baseUrl: state.baseUrl,
+        incidentId: state.selectedIncidentId,
+        token: state.session.token,
         input: {
           ...composer,
           messageTime: new Date(composer.messageTime).toISOString()
@@ -283,16 +231,16 @@ export function MessagesWorkspace({
     messageId: string,
     input: { status?: MessageSnapshot["status"]; assignee?: string }
   ) {
-    if (!authState.session || !selectedIncidentId) {
+    if (!state.session || !state.selectedIncidentId) {
       return;
     }
 
     try {
       const updated = await updateMessage({
-        baseUrl,
-        incidentId: selectedIncidentId,
+        baseUrl: state.baseUrl,
+        incidentId: state.selectedIncidentId,
         messageId,
-        token: authState.session.token,
+        token: state.session.token,
         input
       });
 
@@ -340,7 +288,7 @@ export function MessagesWorkspace({
       return;
     }
 
-    if (!authState.session || !selectedIncidentId) {
+    if (!state.session || !state.selectedIncidentId) {
       return;
     }
 
@@ -356,10 +304,10 @@ export function MessagesWorkspace({
 
     try {
       const entries = await getMessageHistory({
-        baseUrl,
-        incidentId: selectedIncidentId,
+        baseUrl: state.baseUrl,
+        incidentId: state.selectedIncidentId,
         messageId,
-        token: authState.session.token
+        token: state.session.token
       });
 
       startTransition(() => {
@@ -391,13 +339,11 @@ export function MessagesWorkspace({
   return (
     <section className="panel message-center-panel">
       <MessageWorkspaceHeader
-        backendReachable={backendReachable}
-        baseUrl={baseUrl}
-        incidentCount={incidents.length}
+        backendReachable={state.backendReachable}
+        baseUrl={state.baseUrl}
+        incidentCount={state.incidents.length}
         messageCount={messages.length}
-        sessionLabel={
-          authState.currentUser ? authState.currentUser.user.displayName : "offen"
-        }
+        sessionLabel={state.currentUser ? state.currentUser.user.displayName : "offen"}
       />
 
       <div className="workspace-grid">
@@ -405,14 +351,14 @@ export function MessagesWorkspace({
           <div className="status-card">
             <h3>Benutzerstatus</h3>
 
-            {authState.currentUser ? (
+            {state.currentUser ? (
               <div className="stack compact-stack">
                 <p>
-                  <strong>{authState.currentUser.user.displayName}</strong> (
-                  {authState.currentUser.user.username})
+                  <strong>{state.currentUser.user.displayName}</strong> (
+                  {state.currentUser.user.username})
                 </p>
-                <p>Rollen: {authState.currentUser.user.roles.join(", ")}</p>
-                <p>Berechtigungen: {authState.currentUser.permissions.join(", ")}</p>
+                <p>Rollen: {state.currentUser.user.roles.join(", ")}</p>
+                <p>Berechtigungen: {state.currentUser.permissions.join(", ")}</p>
                 <button className="ghost-button" onClick={handleLogout} type="button">
                   Abmelden
                 </button>
@@ -444,14 +390,14 @@ export function MessagesWorkspace({
                     value={loginForm.password}
                   />
                 </label>
-                <button className="primary-button" disabled={!baseUrl} type="submit">
+                <button className="primary-button" disabled={!state.baseUrl} type="submit">
                   Demo-Login
                 </button>
                 <p className="muted-text">Bekannter Demo-Zugang: admin / demo</p>
               </form>
             )}
 
-            {authState.error ? <p className="error-text">{authState.error}</p> : null}
+            {authError ? <p className="error-text">{authError}</p> : null}
           </div>
 
           <div className="status-card">
@@ -460,9 +406,9 @@ export function MessagesWorkspace({
               <span>Aktive Lage</span>
               <select
                 onChange={(event) => setSelectedIncidentId(event.target.value)}
-                value={selectedIncidentId}
+                value={state.selectedIncidentId}
               >
-                {incidents.map((incident) => (
+                {state.incidents.map((incident) => (
                   <option key={incident.id} value={incident.id}>
                     {incident.referenceNumber} - {incident.title}
                   </option>
@@ -470,7 +416,7 @@ export function MessagesWorkspace({
               </select>
             </label>
             <p className="muted-text">
-              Nachrichten werden pro Lage getrennt geladen und bearbeitet.
+              Die aktive Lage kommt direkt aus dem globalen Workspace-Kontext.
             </p>
           </div>
         </div>
@@ -499,10 +445,10 @@ export function MessagesWorkspace({
           <div className="message-center-shell">
             <MessageList
               formatDate={formatDate}
-              incidents={incidents}
+              incidents={state.incidents}
               messages={visibleMessages}
               onSelectMessage={setSelectedMessageId}
-              selectedIncidentId={selectedIncidentId}
+              selectedIncidentId={state.selectedIncidentId}
               selectedMessageId={selectedMessage?.id ?? ""}
             />
 

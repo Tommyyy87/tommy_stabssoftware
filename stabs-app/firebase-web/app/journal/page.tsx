@@ -5,12 +5,13 @@ export const dynamic = "force-dynamic";
 export default function JournalPage() {
   return (
     <main className="shell page-stack">
-      <section className="hero page-hero">
-        <p className="eyebrow">Sekundaermodul</p>
-        <h1>Journal</h1>
+      <section className="hero page-hero tactical-hero">
+        <p className="eyebrow">Querschnittsmodul</p>
+        <h1>Tagebuch</h1>
         <p className="lead">
-          Das Journal ist in Sprint 1 bewusst schlanker, aber voll in den
-          gemeinsamen Arbeitsrahmen integriert.
+          Das Tagebuch bildet den geordneten Nachweisraum fuer relevante
+          Entwicklungen, Uebernahmen und spaetere Verdichtung aus der
+          Stabsarbeit.
         </p>
       </section>
 

@@ -8,13 +8,27 @@ export type PrimaryNavItem = {
 
 export function buildPrimaryNav(pathname: string): PrimaryNavItem[] {
   return [
-    { href: "/", label: "Lageuebersicht", active: pathname === "/" },
+    { href: "/", label: "Fuehrungsueberblick", active: pathname === "/" },
+    { href: "/s1", label: "S1 Personal / Inneres", active: pathname === "/s1" },
+    { href: "/s2", label: "S2 Lage", active: pathname === "/s2" },
+    { href: "/s3", label: "S3 Einsatz", active: pathname === "/s3" },
+    { href: "/s4", label: "S4 Versorgung", active: pathname === "/s4" },
+    {
+      href: "/s5",
+      label: "S5 Presse / Oeffentlichkeit",
+      active: pathname === "/s5"
+    },
+    {
+      href: "/s6",
+      label: "S6 Information / Kommunikation",
+      active: pathname === "/s6"
+    },
     {
       href: "/messages",
       label: "Nachrichten",
       active: pathname === "/messages"
     },
-    { href: "/journal", label: "Journal", active: pathname === "/journal" }
+    { href: "/journal", label: "Tagebuch", active: pathname === "/journal" }
   ];
 }
 
